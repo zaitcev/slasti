@@ -26,6 +26,9 @@ class AppError(Exception):
 #
 class TagBase:
     def __init__(self, dirname0):
+        # An excessively clever way to do the same thing exists, see:
+        # http://zaitcev.livejournal.com/206050.html?thread=418530#t418530
+        # self.dirname = dirname0[:1] + dirname0[1:].rstrip('/')
         d = dirname0
         if len(d) > 1 and d[-1] == '/':
             d = dirname0[:-1]
