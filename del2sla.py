@@ -75,6 +75,8 @@ class TagBase:
 
     # The add1 constructs key from UNIX seconds.
     def add1(self, timeint, title, url, note, tags):
+
+        # for normal website-entered content fix is usually zero
         fix = 0
         while 1:
             stampkey = "%010d.%02d" % (timeint, fix)
@@ -82,15 +84,16 @@ class TagBase:
             # special-case full seconds to make directories a shade faster
             if fix == 0:
                 markname = "%010d" % timeint
-            try:
-                f = open(self.markdir+"/"+markname, "w+")
-            except IOError, e:
-                fix = fix + 1
-                # actually fix should always be zero for human-generated input
-                if fix >= 100:
-                    return
-                continue
-            break
+            if not os.path.exists(self.markdir+"/"+markname):
+                break
+            fix = fix + 1
+            if fix >= 100:
+                return
+
+        try:
+            f = open(self.markdir+"/"+markname, "w+")
+        except IOError, e:
+            raise AppError(str(e))
 
         # This is done because ElementTree throws Unicode strings at us.
         # When we try to write these strings, UnicodeEncodeError happens.
