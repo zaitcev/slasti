@@ -1,0 +1,26 @@
+The path /usr/lib/slasti is hardcoded for now.
+
+[root@elanor ~]# ls /usr/lib/slasti-mod/slasti/
+__init__.py  __init__.pyc  tagbase.py  tagbase.pyc
+
+----- version elanor (mounted to /slasti):
+#
+# WSGI Alias: like ScriptAlias, but for WSGI
+#
+WSGISocketPrefix run/wsgi
+WSGIDaemonProcess slasti processes=2 threads=6
+WSGIProcessGroup slasti
+WSGIScriptAlias /slasti /var/www/wsgi-scripts/slasti.wsgi
+
+SetEnv slasti.userconf /etc/slasti-users.conf
+# This cannot work, because we load the module outside of application()
+#SetEnv slasti.module /usr/lib/slasti-mod
+
+<Directory "/var/www/wsgi-scripts">
+    AllowOverride None
+    Options None
+    Order allow,deny
+    Allow from all
+</Directory>
+
+----- version yukiho (mounted to root):

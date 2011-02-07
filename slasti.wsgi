@@ -8,11 +8,15 @@
 import string
 import json
 import types
+import sys
 
-CFGUSERS = "/etc/slasti-users.conf"
+# CFGUSERS was replaced by  SetEnv slasti.userconf /slasti-users.conf
+# CFGUSERS = "/etc/slasti-users.conf"
 
-class AppError(Exception):
-    pass
+# XXX Learn how to install Python modules. Jeez.
+sys.path = sys.path + [ '/usr/lib/slasti-mod' ]
+import slasti
+from slasti import AppError
 
 # The idea here is the same as with the file-backed tags database:
 # something simple to implement but with an API that presumes a higher
@@ -21,9 +25,9 @@ class UserBase:
     def __init__(self):
         self.users = None
 
-    def open(self):
+    def open(self, userconf):
         try:
-            fp = open(CFGUSERS, 'r')
+            fp = open(userconf, 'r')
         except IOError, e:
             raise AppError(str(e))
 
@@ -93,9 +97,15 @@ def do_environ(environ, start_response):
     return output
 
 def do_user(environ, start_response, path):
+    # We will stop reloading UserBase on every call once we figure out how.
     users = UserBase()
+
+    if not environ.has_key('slasti.userconf'):
+        start_response("500 Internal Error", [('Content-type', 'text/plain')])
+        return ["Configuration error: no environ 'slasti.userconf'"]
+
     try:
-        users.open()
+        users.open(environ['slasti.userconf'])
     except AppError, e:
         start_response("500 Internal Error", [('Content-type', 'text/plain')])
         return ["Configuration error: ", str(e)]
@@ -124,11 +134,6 @@ def application(environ, start_response):
 
     # import os, pwd
     # os.environ["HOME"] = pwd.getpwuid(os.getuid()).pw_dir
-
-    # if environ.has_key('mod_wsgi.version'):
-    #     output = 'Hello mod_wsgi!'
-    # else:
-    #     output = 'Hello other WSGI hosting mechanism!'
 
     # XXX This is incorrect. Must indentify existing resource or 404 first.
     if environ['REQUEST_METHOD'] != 'GET':
