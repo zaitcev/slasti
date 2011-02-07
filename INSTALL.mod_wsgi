@@ -1,5 +1,3 @@
-The path /usr/lib/slasti-mod is hardcoded for now.
-
 [root@elanor ~]# ls /usr/lib/slasti-mod/slasti/
 __init__.py  __init__.pyc  tagbase.py  tagbase.pyc
 
@@ -8,7 +6,7 @@ __init__.py  __init__.pyc  tagbase.py  tagbase.pyc
 # WSGI Alias: like ScriptAlias, but for WSGI
 #
 WSGISocketPrefix run/wsgi
-WSGIDaemonProcess slasti processes=2 threads=6
+WSGIDaemonProcess slasti processes=2 threads=6 python-path=/usr/lib/slasti-mod
 WSGIProcessGroup slasti
 WSGIScriptAlias /slasti /var/www/wsgi-scripts/slasti.wsgi
 
@@ -40,7 +38,7 @@ WSGISocketPrefix run/wsgi
     Alias /favicon.ico /var/www/virt/slasti.zaitcev.us/favicon.ico
     Alias /favicon.png /var/www/virt/slasti.zaitcev.us/favicon.png
 
-    WSGIDaemonProcess slasti processes=2 threads=6
+    WSGIDaemonProcess slasti processes=2 threads=6 python-path=/usr/lib/slasti-mod
     WSGIProcessGroup slasti
     WSGIScriptAlias / /var/www/wsgi-scripts/slasti.wsgi
     <Directory "/var/www/wsgi-scripts">
