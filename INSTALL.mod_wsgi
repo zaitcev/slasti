@@ -24,3 +24,31 @@ SetEnv slasti.userconf /etc/slasti-users.conf
 </Directory>
 
 ----- version yukiho (mounted to root):
+# The WSGISocketPrefix must be set outside of virtual hosts.
+WSGISocketPrefix run/wsgi
+
+<VirtualHost *:80>
+    ServerName slasti.zaitcev.us
+    DocumentRoot /var/www/virt/slasti.zaitcev.us
+    ServerAdmin nonono@kotori.zaitcev.us
+    ErrorLog logs/slasti.zaitcev.us-error_log
+    CustomLog logs/slasti.zaitcev.us-access_log combined
+    #LogLevel info
+
+    # Since WSGI is mounted to root, all statics have to alias.
+    Alias /robots.txt /var/www/virt/slasti.zaitcev.us/robots.txt
+    Alias /favicon.ico /var/www/virt/slasti.zaitcev.us/favicon.ico
+    Alias /favicon.png /var/www/virt/slasti.zaitcev.us/favicon.png
+
+    WSGIDaemonProcess slasti processes=2 threads=6
+    WSGIProcessGroup slasti
+    WSGIScriptAlias / /var/www/wsgi-scripts/slasti.wsgi
+    <Directory "/var/www/wsgi-scripts">
+        AllowOverride None
+        Options None
+        Order allow,deny
+        Allow from all
+    </Directory>
+
+    SetEnv slasti.userconf /etc/slasti-users.conf
+</VirtualHost>
