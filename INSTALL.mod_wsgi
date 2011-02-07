@@ -1,4 +1,4 @@
-The path /usr/lib/slasti is hardcoded for now.
+The path /usr/lib/slasti-mod is hardcoded for now.
 
 [root@elanor ~]# ls /usr/lib/slasti-mod/slasti/
 __init__.py  __init__.pyc  tagbase.py  tagbase.pyc
