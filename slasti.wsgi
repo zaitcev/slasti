@@ -11,6 +11,8 @@ import types
 
 CFGUSERS = "/etc/slasti-users.conf"
 
+# import slasti
+
 class AppError(Exception):
     pass
 
@@ -113,7 +115,7 @@ def do_user(environ, start_response, path):
     output = ["<html><body>"]
 
     output.append("<p>")
-    # output.append(user.name)
+    output.append(user['name'])
     output.append("</p>")
 
     output.append("</body></html>")
