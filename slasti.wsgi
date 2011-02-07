@@ -7,6 +7,7 @@
 
 import string
 import json
+import types
 
 CFGUSERS = "/etc/slasti-users.conf"
 
@@ -33,12 +34,20 @@ class UserBase:
 
         fp.close()
 
-        # [{'root': '/var/www/slasti/zaitcev', 'type': 'fs', 'name': 'zaitcev'},
-        #  {'root': '/var/www/slasti/piyokun', 'type': 'fs', 'name': 'piyokun'}]
+        # [{ 'name':'zaitcev', 'type':'fs', 'root':'/var/www/slasti/zaitcev' },
+        #  { 'name':'piyokun', 'type':'fs', 'root':'/var/www/slasti/piyokun' }]
 
-        # XXX Introspect, make sure sequence, e.g. in case someone forgets [].
+        # In order to prevent weird tracebacks later, we introspect and make
+        # sure that configuration makes sense structurally and that correct
+        # fields are present. Using helpful ideas by Andrew "Pixy" Maizels.
+
+        if not (type(self.users) is types.ListType):
+            raise AppError("Configuration is not a list [...]")
 
         for u in self.users:
+            if not (type(u) is types.DictType):
+                raise AppError("Configured user is not a dictionary {...}")
+
             if not u.has_key('name'):
                 raise AppError("User with no name")
             if not u.has_key('type'):
