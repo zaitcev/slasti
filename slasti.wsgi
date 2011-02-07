@@ -13,8 +13,8 @@ import sys
 # CFGUSERS was replaced by  SetEnv slasti.userconf /slasti-users.conf
 # CFGUSERS = "/etc/slasti-users.conf"
 
-# XXX Learn how to install Python modules. Jeez.
-sys.path = sys.path + [ '/usr/lib/slasti-mod' ]
+# Replaced by  WSGIDaemonProcess slasti python-path=/usr/lib/slasti-mod
+# sys.path = sys.path + [ '/usr/lib/slasti-mod' ]
 import slasti
 from slasti import AppError
 
