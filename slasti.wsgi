@@ -21,6 +21,8 @@ from slasti import AppError
 # The idea here is the same as with the file-backed tags database:
 # something simple to implement but with an API that presumes a higher
 # performance implementation later, if necessary.
+
+# XXX Create a destructor that may close anything open in the database
 class UserBase:
     def __init__(self):
         self.users = None
@@ -115,6 +117,7 @@ def do_user(environ, start_response, path):
 
     user = users.lookup(parsed[1])
     if user == None:
+        users.close()
         start_response("404 Not Found", [('Content-type', 'text/plain')])
         return ["No such user: ", parsed[1], "\r\n"]
 
