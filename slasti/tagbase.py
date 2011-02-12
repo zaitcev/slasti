@@ -12,6 +12,8 @@ import errno
 import codecs
 (utf8_encode, utf8_decode, utf8_reader, utf8_writer) = codecs.lookup("utf-8")
 
+from slasti import AppError
+
 # We are not aware of any specification, so it is unclear if tags are split
 # by space or whitespace. We assume space, to be locale-independent.
 # But this means that we include tabs and foreign whitespace into tags.
@@ -22,6 +24,43 @@ def split_tags(tagstr):
         if t != '':
             tags.append(t)
     return tags
+
+#
+# This is one bookmark when we manipulate it (extracted from TagBase).
+#
+class TagMark:
+    def __init__(self, name):
+        self.name = name
+
+    def __str__(self):
+        return self.name
+
+    def html(self):
+        return "<p>"+self.name+"</p>\n"
+
+class TagCursor:
+    def __init__(self, base):
+        self.base = base
+        # Apparently Python does not provide opendir() and friends, so our
+        # cursor actually loads whole list in memory. As long as the whole
+        # HTML output is in memory too, there is no special concern.
+        # If we cared enough, we'd convert filenames to stamps right away,
+        # then sorted an array of integers. But we don't.
+        # Most likely we'll switch to a database back-end anyway.
+        self.dlist = os.listdir(base.markdir)
+        self.dlist.sort()
+        self.index = 0
+        self.length = len(self.dlist)
+
+    def next(self):
+        if self.index >= self.length:
+            raise StopIteration
+        mark = TagMark(self.dlist[self.index])
+        self.index = self.index + 1
+        return mark
+
+    # def __del__(self):
+    #     ......
 
 #
 # The open database (any back-end in theory, hardcoded to files for now)
@@ -129,3 +168,6 @@ class TagBase:
                 continue
             f.write(tagbuf)
             f.close()
+
+    def __iter__(self):
+        return TagCursor(self)
