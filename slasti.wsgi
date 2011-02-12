@@ -70,6 +70,8 @@ class UserBase:
 
     def close(self):
         pass
+    #def __del__(self):
+    #    pass
 
 def do_root(environ, start_response):
     # XXX This really needs some kind of a pretty picture.
@@ -99,24 +101,24 @@ def do_environ(environ, start_response):
 def do_user(environ, start_response, path):
     # We will stop reloading UserBase on every call once we figure out how.
     users = UserBase()
-
     if not environ.has_key('slasti.userconf'):
-        start_response("500 Internal Error", [('Content-type', 'text/plain')])
-        return ["Configuration error: no environ 'slasti.userconf'"]
-
-    try:
-        users.open(environ['slasti.userconf'])
-    except AppError, e:
-        start_response("500 Internal Error", [('Content-type', 'text/plain')])
-        return ["Configuration error: ", str(e)]
+        raise AppError("No environ 'slasti.userconf'")
+    users.open(environ['slasti.userconf'])
 
     # Query is already split away by the CGI.
     parsed = string.split(path, "/", 2)
 
     user = users.lookup(parsed[1])
     if user == None:
+        users.close()
         start_response("404 Not Found", [('Content-type', 'text/plain')])
         return ["No such user: ", parsed[1], "\r\n"]
+    if user['type'] != 'fs':
+        users.close()
+        raise AppError("Unknown type of user: "+parsed[1])
+
+    base = slasti.tagbase.TagBase(user['root'])
+    base.open()
 
     response_headers = [('Content-type', 'text/html')]
     start_response("200 OK", response_headers)
@@ -126,7 +128,11 @@ def do_user(environ, start_response, path):
     output.append(user['name'])
     output.append("</p>")
 
+    for mark in base:
+        output.append(mark.html())
+
     output.append("</body></html>")
+    base.close()
     users.close()
     return output
 
@@ -138,8 +144,7 @@ def application(environ, start_response):
     # XXX This is incorrect. Must indentify existing resource or 404 first.
     if environ['REQUEST_METHOD'] != 'GET':
         start_response("405 Method Not Allowed",
-                         [('Content-type', 'text/plain'),
-                          ('Allow', 'GET')])
+                       [('Content-type', 'text/plain'), ('Allow', 'GET')])
         return ["Method not allowed: ", environ['REQUEST_METHOD']]
 
     path = environ['PATH_INFO']
@@ -148,7 +153,12 @@ def application(environ, start_response):
     elif path == "/environ":
         return do_environ(environ, start_response)
     else:
-        return do_user(environ, start_response, path)
+        try:
+            return do_user(environ, start_response, path)
+        except AppError, e:
+            start_response("500 Internal Error",
+                           [('Content-type', 'text/plain')])
+            return [str(e), "\r\n"]
 
 # We do not have __main__ in WSGI.
 # if __name__.startswith('_mod_wsgi_'):
