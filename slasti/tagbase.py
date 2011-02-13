@@ -114,7 +114,9 @@ class TagCursor:
         # then sorted an array of integers. But we don't.
         # Most likely we'll switch to a database back-end anyway.
         self.dlist = os.listdir(base.markdir)
+        # Miraclously this sort() works as expected in presence of dot-fix.
         self.dlist.sort()
+        self.dlist.reverse()
         self.index = 0
         self.length = len(self.dlist)
 
@@ -122,7 +124,7 @@ class TagCursor:
         if self.index >= self.length:
             raise StopIteration
         mark = TagMark(self.base, self.dlist[self.index])
-        self.index = self.index + 1
+        self.index += 1
         return mark
 
     # def __del__(self):
@@ -178,7 +180,7 @@ class TagBase:
                 markname = "%010d" % timeint
             if not os.path.exists(self.markdir+"/"+markname):
                 break
-            fix = fix + 1
+            fix += 1
             if fix >= 100:
                 return
 
