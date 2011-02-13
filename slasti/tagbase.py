@@ -11,6 +11,7 @@ import os
 import errno
 import codecs
 (utf8_encode, utf8_decode, utf8_reader, utf8_writer) = codecs.lookup("utf-8")
+import string
 
 from slasti import AppError
 
@@ -26,18 +27,83 @@ def split_tags(tagstr):
     return tags
 
 #
-# This is one bookmark when we manipulate it (extracted from TagBase).
+# TagMark is one bookmark when we manipulate it (extracted from TagBase).
 #
 class TagMark:
-    def __init__(self, name):
-        self.name = name
+    def __init__(self, base, markname):
+        self.name = markname
+        self.stamp0 = 0
+        self.stamp1 = 0
+        self.title = "-"
+        self.url = "-"
+        self.note = ""
+        self.tags = []
+
+        try:
+            f = open(base.markdir+"/"+markname, "r")
+        except IOError:
+            # Set a red tag to tell us where we crashed.
+            self.stamp1 = 1
+            return
+
+        s = f.readline()
+        if s == None or len(s) == 0:
+            self.stamp1 = 2
+            f.close()
+            return
+        # Format is defined as two integers over a dot, which unfortunately
+        # looks like a decimal fraction. Should've used a space. Oh well.
+        slist = string.split(string.rstrip(s, "\r\n"), ".")
+        if len(slist) != 2:
+            self.stamp1 = 3
+            f.close()
+            return
+
+        try:
+            self.stamp0 = int(slist[0])
+            self.stamp1 = int(slist[1])
+        except ValueError:
+            self.stamp1 = 4
+            f.close()
+            return
+
+        s = f.readline()
+        if s == None or len(s) == 0:
+            f.close()
+            return
+        self.title = string.rstrip(s, "\r\n");
+
+        s = f.readline()
+        if s == None or len(s) == 0:
+            f.close()
+            return
+        self.url = string.rstrip(s, "\r\n");
+
+        s = f.readline()
+        if s == None or len(s) == 0:
+            f.close()
+            return
+        self.note = string.rstrip(s, "\r\n");
+
+        s = f.readline()
+        if s == None or len(s) == 0:
+            f.close()
+            return
+
+        self.tags = string.split(string.rstrip(s, "\r\n"))
+
+        f.close()
 
     def __str__(self):
-        return self.name
+        return self.name+'|'+str(self.stamp0)+'.'+str(self.stamp1)+'|'+\
+               self.title+'|'+self.url+'|'+self.note+"|"+str(self.tags)
 
     def html(self):
-        return "<p>"+self.name+"</p>\n"
+        return "<p>"+str(self)+"</p>\n"
 
+#
+# TagCursor is an iterator class.
+#
 class TagCursor:
     def __init__(self, base):
         self.base = base
@@ -55,7 +121,7 @@ class TagCursor:
     def next(self):
         if self.index >= self.length:
             raise StopIteration
-        mark = TagMark(self.dlist[self.index])
+        mark = TagMark(self.base, self.dlist[self.index])
         self.index = self.index + 1
         return mark
 
