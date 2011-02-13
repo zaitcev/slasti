@@ -7,11 +7,14 @@
 # requires:
 #  codecs
 #
-import os
-import errno
+import string
 import codecs
 (utf8_encode, utf8_decode, utf8_reader, utf8_writer) = codecs.lookup("utf-8")
-import string
+import os
+import errno
+import time
+# import urllib
+import cgi
 
 from slasti import AppError
 
@@ -95,11 +98,34 @@ class TagMark:
         f.close()
 
     def __str__(self):
-        return self.name+'|'+str(self.stamp0)+'.'+str(self.stamp1)+'|'+\
+        # There do not seem to be any exceptions raised with weird inputs.
+        datestr = time.strftime("%Y-%m-%d", time.gmtime(self.stamp0))
+        return self.name+'|'+datestr+'|'+\
                self.title+'|'+self.url+'|'+self.note+"|"+str(self.tags)
 
     def html(self):
-        return "<p>"+str(self)+"</p>\n"
+        datestr = time.strftime("%Y-%m-%d", time.gmtime(self.stamp0))
+
+        title = self.title
+        if len(title) == 0:
+            title = self.url
+        title = cgi.escape(title)
+
+        # This does not work as expected. So, hand-roll quotes for now.
+        # url = urllib.quote_plus(self.url);
+        url = self.url;
+        url.replace('"', '%22')
+
+        tagstr = cgi.escape(str(self.tags))
+
+        anchor = '<a href="'+url+'">'+title+'</a>'
+
+        note = self.note
+        if len(note) == 0:
+            return "<p>"+datestr+" "+anchor+"<br />"+tagstr+"</p>\n"
+
+        note = cgi.escape(note)
+        return "<p>"+datestr+" "+anchor+"<br />"+note+"<br />"+tagstr+"</p>\n"
 
 #
 # TagCursor is an iterator class.

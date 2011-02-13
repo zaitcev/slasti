@@ -124,9 +124,9 @@ def do_user(environ, start_response, path):
     start_response("200 OK", response_headers)
     output = ["<html><body>"]
 
-    output.append("<p>")
+    output.append('<h1 align="center">')
     output.append(user['name'])
-    output.append("</p>")
+    output.append('</h1>')
 
     for mark in base:
         output.append(mark.html())
