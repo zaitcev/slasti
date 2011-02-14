@@ -8,4 +8,4 @@
 class AppError(Exception):
     pass
 
-import tagbase
+import main, tagbase
