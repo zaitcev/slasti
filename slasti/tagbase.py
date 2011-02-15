@@ -24,7 +24,6 @@ from slasti import AppError
 def split_tags(tagstr):
     tags = []
     for t in tagstr.split(' '):
-        t = t.strip(' ')
         if t != '':
             tags.append(t)
     return tags
@@ -109,14 +108,18 @@ class TagMark:
         title = self.title
         if len(title) == 0:
             title = self.url
-        title = cgi.escape(title)
+        title = cgi.escape(title, 1)
 
-        # This does not work as expected. So, hand-roll quotes for now.
-        # url = urllib.quote_plus(self.url);
-        url = self.url;
-        url.replace('"', '%22')
+        # The urllib.quote_plus does not work as expected: it escapes ':' and
+        # such too, so "http://host" turns into "http%3A//host", and this
+        # corrupts the link. So, hand-roll quotes and XML escapes for now.
+        ## url = urllib.quote_plus(self.url);
+        url = self.url.replace('"', '%22')
+        url = self.url.replace('&', '%26')
+        url = self.url.replace('<', '%3C')
+        url = self.url.replace('>', '%3E')
 
-        tagstr = cgi.escape(str(self.tags))
+        tagstr = cgi.escape(" ".join(self.tags), 1)
 
         anchor = '<a href="'+url+'">'+title+'</a>'
 
@@ -126,6 +129,27 @@ class TagMark:
 
         note = cgi.escape(note)
         return "<p>"+datestr+" "+anchor+"<br />"+note+"<br />"+tagstr+"</p>\n"
+
+    def xml(self):
+        datestr = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(self.stamp0))
+
+        title = self.title
+        title = cgi.escape(title, 1)
+
+        url = self.url;
+        url = cgi.escape(url, 1)
+
+        tagstr = " ".join(self.tags)
+        tagstr = cgi.escape(tagstr, 1)
+
+        note = self.note
+        note = cgi.escape(note, 1)
+
+        # Del.icio.us also export hash="" (MD5 of URL in href) and meta=""
+        # (MD5 of unknown content). We don't know if this is needed for anyone.
+        fmt = '  <post href="%s" description="%s" tag="%s" time="%s"'+\
+              ' extended="%s" />\n'
+        return fmt % (url, title, tagstr, datestr, note)
 
 #
 # TagCursor is an iterator class.

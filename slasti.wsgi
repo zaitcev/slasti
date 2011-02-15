@@ -70,6 +70,8 @@ class UserBase:
 
     def close(self):
         pass
+    # This has to be implemented when close() becomes non-empty, due to
+    # the way AppError bubbles up and bypasses the level where we close.
     #def __del__(self):
     #    pass
 
@@ -110,30 +112,21 @@ def do_user(environ, start_response, path):
 
     user = users.lookup(parsed[1])
     if user == None:
-        users.close()
         start_response("404 Not Found", [('Content-type', 'text/plain')])
         return ["No such user: ", parsed[1], "\r\n"]
     if user['type'] != 'fs':
-        users.close()
         raise AppError("Unknown type of user: "+parsed[1])
 
     base = slasti.tagbase.TagBase(user['root'])
     base.open()
 
-    response_headers = [('Content-type', 'text/html')]
-    start_response("200 OK", response_headers)
-    output = ["<html><body>"]
+    if len(parsed) >= 3:
+        path = parsed[2]
+    else:
+        path = ""
+    output = slasti.main.app(start_response, user, base, path)
 
-    output.append('<h1 align="center">')
-    output.append(user['name'])
-    output.append('</h1>')
-
-    for mark in base:
-        output.append(mark.html())
-
-    output.append("</body></html>")
     base.close()
-    users.close()
     return output
 
 def application(environ, start_response):

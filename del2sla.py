@@ -10,6 +10,7 @@
 
 import sys
 import time
+import calendar
 from xml.etree import ElementTree
 
 # N.B. This includes app-level generics such as AppError. Any better ideas?
@@ -108,7 +109,7 @@ def do(dirname, xmlname):
             continue
 
         try:
-            timeint = int(time.mktime(timeval))
+            timeint = calendar.timegm(timeval)
         except (ValueError, OverflowError), e:
             # XXX A user supplied Year 1900 or something like that.
             print e
