@@ -10,11 +10,11 @@ import time
 
 from slasti import AppError
 
-def mark_anchor_html(mark, text):
+def mark_anchor_html(mark, path, text):
     if mark == None:
         return '[-]'
     (stamp0, stamp1) = mark.key()
-    return '[<a href="mark.%d.%02d">%s</a>]' % (stamp0, stamp1, text)
+    return '[<a href="%s/mark.%d.%02d">%s</a>]' % (path, stamp0, stamp1, text)
 
 def page_mark_html(start_response, user, base, stamp0, stamp1):
     start_response("200 OK", [('Content-type', 'text/plain')])
@@ -26,30 +26,33 @@ def one_mark_html(start_response, pfx, user, base, stamp0, stamp1):
         start_response("404 Not Found", [('Content-type', 'text/plain')])
         return ["Mark not found: ", str(stamp0), str(stamp1), "\r\n"]
 
+    path = pfx+'/'+user['name']
+
     start_response("200 OK", [('Content-type', 'text/html')])
     output = ["<html><body>\n"]
 
-    output.append('<h1><a href="%s/%s/">%s</a></h1>\n' % \
-                  (pfx, user['name'], user['name']))
+    output.append('<h1><a href="%s/">%s</a></h1>\n' % (path, user['name']))
 
     output.append("<p>")
     datestr = time.strftime("%Y-%m-%d", time.gmtime(stamp0))
     output.append(datestr)
     output.append("<br />\n")
     output.append(mark.html())
-    output.append("</p>")
+    output.append("</p>\n")
 
     output.append("<hr />\n")
-    output.append(mark_anchor_html(mark.pred(), "&laquo;"))
-    output.append(mark_anchor_html(mark, "&#9734;"))
-    output.append(mark_anchor_html(mark.succ(), "&raquo;"))
+    output.append(mark_anchor_html(mark.pred(), path, "&laquo;"))
+    output.append(mark_anchor_html(mark,        path, "&#9734;"))
+    output.append(mark_anchor_html(mark.succ(), path, "&raquo;"))
     output.append("<br />\n")
 
     output.append("</body></html>\n")
     return output
 
 # XXX This is temporary. We'll do pages at root when we have pages.
-def root_mark_html(start_response, user, base):
+def root_mark_html(start_response, pfx, user, base):
+    path = pfx+'/'+user['name']
+
     response_headers = [('Content-type', 'text/html')]
     start_response("200 OK", response_headers)
     output = ["<html><body>\n"]
@@ -64,9 +67,9 @@ def root_mark_html(start_response, user, base):
         datestr = time.strftime("%Y-%m-%d", time.gmtime(stamp0))
 
         output.append("<p>%s %s " % \
-                      (datestr, mark_anchor_html(mark, "&#9734;")))
+                      (datestr, mark_anchor_html(mark, path, "&#9734;")))
         output.append(mark.html())
-        output.append("</p>")
+        output.append("</p>\n")
 
     output.append("</body></html>\n")
 
@@ -102,7 +105,7 @@ def full_mark_xml(start_response, user, base):
 #
 def app(start_response, pfx, user, base, reqpath):
     if reqpath == "":
-        return root_mark_html(start_response, user, base)
+        return root_mark_html(start_response, pfx, user, base)
     elif reqpath == "export.xml":
         return full_mark_xml(start_response, user, base)
     elif reqpath == "newmark":
