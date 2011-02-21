@@ -107,9 +107,12 @@ def do_user(environ, start_response, path):
         raise AppError("No environ 'slasti.userconf'")
     users.open(environ['slasti.userconf'])
 
+    # The prefix must be either empty or absolute (no relative or None).
     pfx = environ['SCRIPT_NAME']
-    if pfx == None:
+    if pfx == None or pfx == "/":
         pfx = ""
+    if pfx != "" and pfx[0] != "/":
+        pfx = "/"+pfx
 
     # Query is already split away by the CGI.
     parsed = string.split(path, "/", 2)
