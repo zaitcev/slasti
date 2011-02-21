@@ -32,8 +32,13 @@ def split_tags(tagstr):
 # TagMark is one bookmark when we manipulate it (extracted from TagBase).
 #
 class TagMark:
-    def __init__(self, base, markname):
-        self.name = markname
+    def __init__(self, base, marklist, markindex):
+        markname = marklist[markindex]
+
+        self.base = base
+        self.ourlist = marklist
+        self.ourindex = markindex
+
         self.stamp0 = 0
         self.stamp1 = 0
         self.title = "-"
@@ -99,12 +104,13 @@ class TagMark:
     def __str__(self):
         # There do not seem to be any exceptions raised with weird inputs.
         datestr = time.strftime("%Y-%m-%d", time.gmtime(self.stamp0))
-        return self.name+'|'+datestr+'|'+\
+        return self.ourlist[self.ourindex]+'|'+datestr+'|'+\
                self.title+'|'+self.url+'|'+self.note+"|"+str(self.tags)
 
-    def html(self):
-        datestr = time.strftime("%Y-%m-%d", time.gmtime(self.stamp0))
+    def key(self):
+        return (self.stamp0, self.stamp1)
 
+    def html(self):
         title = self.title
         if len(title) == 0:
             title = self.url
@@ -125,10 +131,10 @@ class TagMark:
 
         note = self.note
         if len(note) == 0:
-            return "<p>"+datestr+" "+anchor+"<br />"+tagstr+"</p>\n"
+            return anchor+"<br />"+tagstr
 
         note = cgi.escape(note)
-        return "<p>"+datestr+" "+anchor+"<br />"+note+"<br />"+tagstr+"</p>\n"
+        return anchor+"<br />"+note+"<br />"+tagstr
 
     def xml(self):
         datestr = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(self.stamp0))
@@ -150,6 +156,18 @@ class TagMark:
         fmt = '  <post href="%s" description="%s" tag="%s" time="%s"'+\
               ' extended="%s" />\n'
         return fmt % (url, title, tagstr, datestr, note)
+
+    def succ(self):
+        if self.ourindex+1 >= len(self.ourlist):
+            return None
+        # maybe check here that TagMark returned with nonzero stamp0
+        return TagMark(self.base, self.ourlist, self.ourindex+1)
+
+    def pred(self):
+        if self.ourindex == 0:
+            return None
+        # maybe check here that TagMark returned with nonzero stamp0
+        return TagMark(self.base, self.ourlist, self.ourindex-1)
 
 #
 # TagCursor is an iterator class.
@@ -173,7 +191,7 @@ class TagCursor:
     def next(self):
         if self.index >= self.length:
             raise StopIteration
-        mark = TagMark(self.base, self.dlist[self.index])
+        mark = TagMark(self.base, self.dlist, self.index)
         self.index += 1
         return mark
 
@@ -289,3 +307,25 @@ class TagBase:
 
     def __iter__(self):
         return TagCursor(self)
+
+    def lookup(self, timeint, fix):
+        if fix == 0:
+                matchname = "%010d" % timeint
+        else:
+                matchname = "%010d.%02d" % (timeint, fix)
+        # matchname = self.markdir+"/"+markname
+
+        # Would be nice to cache the directory in TagBase somewhere.
+        # Should we catch OSError here, incase of lookup on un-opened base?
+        dlist = os.listdir(self.markdir)
+        dlist.sort()
+        dlist.reverse()
+
+        matchindex = 0
+        while matchindex < len(dlist):
+            if dlist[matchindex] == matchname:
+                break
+            matchindex += 1
+        if matchindex == len(dlist):
+            return None
+        return TagMark(self, dlist, matchindex)

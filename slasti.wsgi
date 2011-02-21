@@ -107,6 +107,10 @@ def do_user(environ, start_response, path):
         raise AppError("No environ 'slasti.userconf'")
     users.open(environ['slasti.userconf'])
 
+    pfx = environ['SCRIPT_NAME']
+    if pfx == None:
+        pfx = ""
+
     # Query is already split away by the CGI.
     parsed = string.split(path, "/", 2)
 
@@ -124,7 +128,7 @@ def do_user(environ, start_response, path):
         path = parsed[2]
     else:
         path = ""
-    output = slasti.main.app(start_response, user, base, path)
+    output = slasti.main.app(start_response, pfx, user, base, path)
 
     base.close()
     return output
