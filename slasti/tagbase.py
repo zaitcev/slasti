@@ -329,3 +329,12 @@ class TagBase:
         if matchindex == len(dlist):
             return None
         return TagMark(self, dlist, matchindex)
+
+    def first(self):
+        dlist = os.listdir(self.markdir)
+        dlist.sort()
+        dlist.reverse()
+
+        if len(dlist) == 0:
+            return None
+        return TagMark(self, dlist, 0)
