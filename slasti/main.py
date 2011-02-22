@@ -10,7 +10,7 @@ import time
 
 from slasti import AppError
 
-PAGESZ = 10
+PAGESZ = 25
 
 BLACKSTAR = "&#9733;"
 WHITESTAR = "&#9734;"
