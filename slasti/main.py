@@ -41,6 +41,17 @@ def mark_anchor_html(mark, path, text):
     (stamp0, stamp1) = mark.key()
     return '[<a href="%s/mark.%d.%02d">%s</a>]' % (path, stamp0, stamp1, text)
 
+def spit_lead(output, path, left_lead):
+    output.append('<table width="100%" style="background: #ebf7eb" '+\
+                  'border=0 cellpadding=1 cellspacing=0><tr valign="top">\n')
+    output.append('<td align="left">%s</td>\n' % left_lead)
+    output.append('<td align="right">')
+    output.append(' [<a href="%s/tags">tags</a>]' % path)
+    output.append(' [<a href="%s/newmark">n</a>]' % path)
+    output.append(' [<a href="%s/export.xml">e</a>]' % path)
+    output.append('</td>\n')
+    output.append('</tr></table>')
+
 def page_mark_html(start_response, pfx, user, base, stamp0, stamp1):
     mark_top = base.lookup(stamp0, stamp1)
     if mark_top == None:
@@ -53,9 +64,10 @@ def page_mark_html(start_response, pfx, user, base, stamp0, stamp1):
     start_response("200 OK", [('Content-type', 'text/html')])
     output = ["<html><body>\n"]
 
-    # align=center does not match individual mark's style
-    output.append('<h1><a href="%s/">%s</a> / %s</h1>\n' % \
-             (path, user['name'], page_anchor_html(mark_top, path, BLACKSTAR)))
+    left_lead = '  <h2 style="margin-bottom:0">'+\
+                '<a href="%s/">%s</a> / %s</h2>\n' % \
+             (path, user['name'], page_anchor_html(mark_top, path, BLACKSTAR))
+    spit_lead(output, path, left_lead)
 
     mark = mark_top
     mark_next = None
@@ -90,9 +102,10 @@ def page_empty_html(start_response, pfx, user, base):
     start_response("200 OK", [('Content-type', 'text/html')])
     output = ["<html><body>\n"]
 
-    output.append('<h1>')
-    output.append(user['name'])
-    output.append(' / [-]</h1>\n')
+    left_lead = '  <h2 style="margin-bottom:0">'+\
+                '<a href="%s/">%s</a> / [-]</h2>\n' % \
+                (path, user['name'])
+    spit_lead(output, path, left_lead)
 
     output.append("<hr />\n")
     output.append('[-] [-] [-]')
@@ -112,7 +125,10 @@ def one_mark_html(start_response, pfx, user, base, stamp0, stamp1):
     start_response("200 OK", [('Content-type', 'text/html')])
     output = ["<html><body>\n"]
 
-    output.append('<h1><a href="%s/">%s</a></h1>\n' % (path, user['name']))
+    left_lead = '  <h2 style="margin-bottom:0">'+\
+                '<a href="%s/">%s</a></h2>\n' % \
+                (path, user['name'])
+    spit_lead(output, path, left_lead)
 
     output.append("<p>")
     datestr = time.strftime("%Y-%m-%d", time.gmtime(stamp0))
@@ -143,10 +159,10 @@ def root_mark_html(start_response, pfx, user, base):
     # start_response("200 OK", response_headers)
     # output = ["<html><body>\n"]
     #
-    # # align=center does not match individual mark's style
-    # output.append('<h1>')
-    # output.append(user['name'])
-    # output.append('</h1>\n')
+    # left_lead = '  <h2 style="margin-bottom:0">'+\
+    #             '<a href="%s/">%s</a></h2>\n' % \
+    #             (path, user['name']))
+    # spit_lead(output, path, left_lead)
     #
     # for mark in base:
     #     (stamp0, stamp1) = mark.key()
