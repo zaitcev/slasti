@@ -119,11 +119,12 @@ class TagMark:
         # The urllib.quote_plus does not work as expected: it escapes ':' and
         # such too, so "http://host" turns into "http%3A//host", and this
         # corrupts the link. So, hand-roll quotes and XML escapes for now.
-        ## url = urllib.quote_plus(self.url);
-        url = self.url.replace('"', '%22')
-        url = self.url.replace('&', '%26')
-        url = self.url.replace('<', '%3C')
-        url = self.url.replace('>', '%3E')
+        ## url = urllib.quote_plus(self.url)
+        url = self.url
+        url = url.replace('"', '%22')
+        url = url.replace('&', '%26')
+        url = url.replace('<', '%3C')
+        url = url.replace('>', '%3E')
 
         tagstr = cgi.escape(" ".join(self.tags), 1)
 
@@ -131,10 +132,10 @@ class TagMark:
 
         note = self.note
         if len(note) == 0:
-            return anchor+"<br />"+tagstr
+            return anchor
 
         note = cgi.escape(note)
-        return anchor+"<br />"+note+"<br />"+tagstr
+        return anchor+"<br />"+note
 
     def xml(self):
         datestr = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(self.stamp0))
