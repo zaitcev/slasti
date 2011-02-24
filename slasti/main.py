@@ -7,6 +7,8 @@
 
 import string
 import time
+import urllib
+import cgi
 
 from slasti import AppError
 
@@ -41,6 +43,13 @@ def mark_anchor_html(mark, path, text):
     (stamp0, stamp1) = mark.key()
     return '[<a href="%s/mark.%d.%02d">%s</a>]' % (path, stamp0, stamp1, text)
 
+def tag_anchor_html(tag, path):
+    if tag == None:
+        return ' -'
+    tagu = urllib.quote_plus(tag)
+    tagt = cgi.escape(tag)
+    return ' <a href="%s/%s/">%s</a>' % (path, tagu, tagt)
+
 def spit_lead(output, path, left_lead):
     output.append('<table width="100%" style="background: #ebf7eb" '+\
                   'border=0 cellpadding=1 cellspacing=0><tr valign="top">\n')
@@ -66,7 +75,7 @@ def page_mark_html(start_response, pfx, user, base, stamp0, stamp1):
 
     left_lead = '  <h2 style="margin-bottom:0">'+\
                 '<a href="%s/">%s</a> / %s</h2>\n' % \
-             (path, user['name'], page_anchor_html(mark_top, path, BLACKSTAR))
+             (path, user['name'], BLACKSTAR)
     spit_lead(output, path, left_lead)
 
     mark = mark_top
@@ -79,6 +88,9 @@ def page_mark_html(start_response, pfx, user, base, stamp0, stamp1):
         output.append("<p>%s %s " % \
                       (datestr, mark_anchor_html(mark, path, WHITESTAR)))
         output.append(mark.html())
+        output.append("<br>\n")
+        for tag in mark.tags:
+            output.append(tag_anchor_html(tag, path))
         output.append("</p>\n")
 
         mark_next = mark.succ()
@@ -118,7 +130,7 @@ def one_mark_html(start_response, pfx, user, base, stamp0, stamp1):
     mark = base.lookup(stamp0, stamp1)
     if mark == None:
         start_response("404 Not Found", [('Content-type', 'text/plain')])
-        return ["Mark not found: ", str(stamp0), str(stamp1), "\r\n"]
+        return ["Mark not found: ", str(stamp0), ".", str(stamp1), "\r\n"]
 
     path = pfx+'/'+user['name']
 
@@ -133,8 +145,11 @@ def one_mark_html(start_response, pfx, user, base, stamp0, stamp1):
     output.append("<p>")
     datestr = time.strftime("%Y-%m-%d", time.gmtime(stamp0))
     output.append(datestr)
-    output.append("<br />\n")
+    output.append("<br>\n")
     output.append(mark.html())
+    output.append("<br>\n")
+    for tag in mark.tags:
+        output.append(tag_anchor_html(tag, path))
     output.append("</p>\n")
 
     output.append("<hr />\n")
