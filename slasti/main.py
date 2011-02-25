@@ -10,7 +10,7 @@ import time
 import urllib
 import cgi
 
-from slasti import AppError
+from slasti import AppError, App404Error
 
 PAGESZ = 25
 
@@ -65,8 +65,7 @@ def page_mark_html(start_response, pfx, user, base, stamp0, stamp1):
     mark_top = base.lookup(stamp0, stamp1)
     if mark_top == None:
         # We have to have at least one mark to display a page
-        start_response("404 Not Found", [('Content-type', 'text/plain')])
-        return ["Page not found: ", str(stamp0), str(stamp1), "\r\n"]
+        raise App404Error("Page not found: "+str(stamp0)+"."+str(stamp1))
 
     path = pfx+'/'+user['name']
 
@@ -129,8 +128,7 @@ def page_empty_html(start_response, pfx, user, base):
 def one_mark_html(start_response, pfx, user, base, stamp0, stamp1):
     mark = base.lookup(stamp0, stamp1)
     if mark == None:
-        start_response("404 Not Found", [('Content-type', 'text/plain')])
-        return ["Mark not found: ", str(stamp0), ".", str(stamp1), "\r\n"]
+        raise App404Error("Mark not found: "+str(stamp0)+"."+str(stamp1))
 
     path = pfx+'/'+user['name']
 
@@ -247,17 +245,16 @@ def app(start_response, pfx, user, base, reqpath):
     else:
         p = string.split(reqpath, ".")
         if len(p) != 3:
-            start_response("404 Not Found", [('Content-type', 'text/plain')])
-            return ["Not found: ", reqpath, "\r\n"]
+            raise App404Error("Not found: "+reqpath)
         try:
             stamp0 = int(p[1])
             stamp1 = int(p[2])
         except ValueError:
-            start_response("404 Not Found", [('Content-type', 'text/plain')])
-            return ["Not found: ", reqpath, "\r\n"]
+            raise App404Error("Not found: "+reqpath)
         if p[0] == "mark":
-            return one_mark_html(start_response, pfx, user, base, stamp0, stamp1)
+            return one_mark_html(start_response, pfx, user, base, \
+                                 stamp0, stamp1)
         if p[0] == "page":
-            return page_mark_html(start_response, pfx, user, base, stamp0, stamp1)
-        start_response("404 Not Found", [('Content-type', 'text/plain')])
-        return ["Not found: ", reqpath, "\r\n"]
+            return page_mark_html(start_response, pfx, user, base, \
+                                  stamp0, stamp1)
+        raise App404Error("Not found: "+reqpath)

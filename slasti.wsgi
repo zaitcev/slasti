@@ -16,7 +16,7 @@ import sys
 # Replaced by  WSGIDaemonProcess slasti python-path=/usr/lib/slasti-mod
 # sys.path = sys.path + [ '/usr/lib/slasti-mod' ]
 import slasti
-from slasti import AppError
+from slasti import AppError, App404Error
 
 # The idea here is the same as with the file-backed tags database:
 # something simple to implement but with an API that presumes a higher
@@ -119,8 +119,7 @@ def do_user(environ, start_response, path):
 
     user = users.lookup(parsed[1])
     if user == None:
-        start_response("404 Not Found", [('Content-type', 'text/plain')])
-        return ["No such user: ", parsed[1], "\r\n"]
+        raise App404Error("No such user: "+parsed[1])
     if user['type'] != 'fs':
         raise AppError("Unknown type of user: "+parsed[1])
 
@@ -157,6 +156,10 @@ def application(environ, start_response):
             return do_user(environ, start_response, path)
         except AppError, e:
             start_response("500 Internal Error",
+                           [('Content-type', 'text/plain')])
+            return [str(e), "\r\n"]
+        except App404Error, e:
+            start_response("404 Not Found",
                            [('Content-type', 'text/plain')])
             return [str(e), "\r\n"]
 
