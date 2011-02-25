@@ -10,7 +10,7 @@ import time
 import urllib
 import cgi
 
-from slasti import AppError
+from slasti import AppError, App404Error
 
 PAGESZ = 25
 
@@ -61,22 +61,24 @@ def spit_lead(output, path, left_lead):
     output.append('</td>\n')
     output.append('</tr></table>')
 
-def page_mark_html(start_response, pfx, user, base, stamp0, stamp1):
-    mark_top = base.lookup(stamp0, stamp1)
-    if mark_top == None:
-        # We have to have at least one mark to display a page
-        start_response("404 Not Found", [('Content-type', 'text/plain')])
-        return ["Page not found: ", str(stamp0), str(stamp1), "\r\n"]
+def page_any_html(start_response, pfx, user, base, mark_top):
+    username = user['name']
+    userpath = pfx+'/'+username
 
-    path = pfx+'/'+user['name']
+    what = mark_top.tag()
+    if what == None:
+        what = BLACKSTAR
+        path = pfx+'/'+username
+    else:
+        path = pfx+'/'+username+'/'+what
 
     start_response("200 OK", [('Content-type', 'text/html')])
     output = ["<html><body>\n"]
 
     left_lead = '  <h2 style="margin-bottom:0">'+\
                 '<a href="%s/">%s</a> / %s</h2>\n' % \
-             (path, user['name'], BLACKSTAR)
-    spit_lead(output, path, left_lead)
+             (userpath, username, what)
+    spit_lead(output, userpath, left_lead)
 
     mark = mark_top
     mark_next = None
@@ -86,11 +88,11 @@ def page_mark_html(start_response, pfx, user, base, stamp0, stamp1):
         datestr = time.strftime("%Y-%m-%d", time.gmtime(stamp0))
 
         output.append("<p>%s %s " % \
-                      (datestr, mark_anchor_html(mark, path, WHITESTAR)))
+                      (datestr, mark_anchor_html(mark, userpath, WHITESTAR)))
         output.append(mark.html())
         output.append("<br>\n")
         for tag in mark.tags:
-            output.append(tag_anchor_html(tag, path))
+            output.append(tag_anchor_html(tag, userpath))
         output.append("</p>\n")
 
         mark_next = mark.succ()
@@ -107,6 +109,20 @@ def page_mark_html(start_response, pfx, user, base, stamp0, stamp1):
 
     output.append("</body></html>\n")
     return output
+
+def page_mark_html(start_response, pfx, user, base, stamp0, stamp1):
+    mark = base.lookup(stamp0, stamp1)
+    if mark == None:
+        # We have to have at least one mark to display a page
+        raise App404Error("Page not found: "+str(stamp0)+"."+str(stamp1))
+    return page_any_html(start_response, pfx, user, base, mark)
+
+def page_tag_html(start_response, pfx, user, base, tag, stamp0, stamp1):
+    mark = base.taglookup(tag, stamp0, stamp1)
+    if mark == None:
+        raise App404Error("Tag page not found: "+tag+" / "+\
+                           str(stamp0)+"."+str(stamp1))
+    return page_any_html(start_response, pfx, user, base, mark)
 
 def page_empty_html(start_response, pfx, user, base):
     path = pfx+'/'+user['name']
@@ -129,8 +145,7 @@ def page_empty_html(start_response, pfx, user, base):
 def one_mark_html(start_response, pfx, user, base, stamp0, stamp1):
     mark = base.lookup(stamp0, stamp1)
     if mark == None:
-        start_response("404 Not Found", [('Content-type', 'text/plain')])
-        return ["Mark not found: ", str(stamp0), ".", str(stamp1), "\r\n"]
+        raise App404Error("Mark not found: "+str(stamp0)+"."+str(stamp1))
 
     path = pfx+'/'+user['name']
 
@@ -165,9 +180,7 @@ def root_mark_html(start_response, pfx, user, base):
     mark = base.first()
     if mark == None:
         return page_empty_html(start_response, pfx, user, base)
-    (stamp0, stamp1) = mark.key()
-    return page_mark_html(start_response, pfx, user, base, stamp0, stamp1)
-
+    return page_any_html(start_response, pfx, user, base, mark)
     ## The non-paginated version
     #
     # response_headers = [('Content-type', 'text/html')]
@@ -190,6 +203,13 @@ def root_mark_html(start_response, pfx, user, base):
     #
     # output.append("</body></html>\n")
     # return output
+
+def root_tag_html(start_response, pfx, user, base, tag):
+    mark = base.tagfirst(tag)
+    if mark == None:
+        # Not sure if this may happen legitimately, so 404 for now.
+        raise App404Error("Tag page not found: "+tag)
+    return page_any_html(start_response, pfx, user, base, mark)
 
 # full_mark_html() would be a Netscape bookmarks file, perhaps.
 def full_mark_xml(start_response, user, base):
@@ -215,49 +235,51 @@ def full_mark_xml(start_response, user, base):
 #   export.xml          -- del-compatible XML
 #   newmark             -- PUT or POST here (XXX protect)
 #   anime/              -- tag (must have slash)
-#   anime/page.1293667202.11  -- tag page
+#   anime/page.1293667202.11  -- tag page off this down
 #   moo.xml/            -- tricky tag
 #   page.1293667202.11/ -- even trickier tag
 #
 def app(start_response, pfx, user, base, reqpath):
     if reqpath == "":
         return root_mark_html(start_response, pfx, user, base)
-    elif reqpath == "export.xml":
+    if reqpath == "export.xml":
         return full_mark_xml(start_response, user, base)
-    elif reqpath == "newmark":
+    if reqpath == "newmark":
         start_response("403 Not Permitted", [('Content-type', 'text/plain')])
         return ["New mark does not work yet\r\n"]
-    elif "/" in reqpath:
-        # p = string.split(reqpath, "/", 1)
-        # tag = p[0]
-        # page = p[1]
-        # p = string.split(page, ".")
-        # if len(p) != 3 or p[0] != "page":
-        #     start_response("404 Not Found", [('Content-type', 'text/plain')])
-        #     return ["Not found: ", reqpath, "\r\n"]
-        # try:
-        #     stamp0 = int(p[1])
-        #     stamp1 = int(p[2])
-        # except ValueError:
-        #     start_response("404 Not Found", [('Content-type', 'text/plain')])
-        #     return ["Not found: ", reqpath, "\r\n"]
-        # return page_tag_html(user, base, tag, stamp0, stamp1)
-        start_response("404 Not Found", [('Content-type', 'text/plain')])
-        return ["Tag not supported yet: ", reqpath, "\r\n"]
-    else:
-        p = string.split(reqpath, ".")
+    if "/" in reqpath:
+        # Trick: by splitting with limit 2 we prevent users from poisoning
+        # the tag with slashes. Not that it matters all that much, but still.
+        p = string.split(reqpath, "/", 2)
+        tag = p[0]
+        page = p[1]
+        if page == "":
+            return root_tag_html(start_response, pfx, user, base, tag)
+        p = string.split(page, ".")
         if len(p) != 3:
-            start_response("404 Not Found", [('Content-type', 'text/plain')])
-            return ["Not found: ", reqpath, "\r\n"]
+            raise App404Error("Not found: "+reqpath)
         try:
             stamp0 = int(p[1])
             stamp1 = int(p[2])
         except ValueError:
-            start_response("404 Not Found", [('Content-type', 'text/plain')])
-            return ["Not found: ", reqpath, "\r\n"]
-        if p[0] == "mark":
-            return one_mark_html(start_response, pfx, user, base, stamp0, stamp1)
+            raise App404Error("Not found: "+reqpath)
         if p[0] == "page":
-            return page_mark_html(start_response, pfx, user, base, stamp0, stamp1)
-        start_response("404 Not Found", [('Content-type', 'text/plain')])
-        return ["Not found: ", reqpath, "\r\n"]
+            return page_tag_html(start_response, pfx, user, base, tag, \
+                                 stamp0, stamp1)
+        raise App404Error("Not found: "+reqpath)
+    else:
+        p = string.split(reqpath, ".")
+        if len(p) != 3:
+            raise App404Error("Not found: "+reqpath)
+        try:
+            stamp0 = int(p[1])
+            stamp1 = int(p[2])
+        except ValueError:
+            raise App404Error("Not found: "+reqpath)
+        if p[0] == "mark":
+            return one_mark_html(start_response, pfx, user, base, \
+                                 stamp0, stamp1)
+        if p[0] == "page":
+            return page_mark_html(start_response, pfx, user, base, \
+                                  stamp0, stamp1)
+        raise App404Error("Not found: "+reqpath)

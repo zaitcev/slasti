@@ -32,10 +32,11 @@ def split_tags(tagstr):
 # TagMark is one bookmark when we manipulate it (extracted from TagBase).
 #
 class TagMark:
-    def __init__(self, base, marklist, markindex):
+    def __init__(self, base, tagname, marklist, markindex):
         markname = marklist[markindex]
 
         self.base = base
+        self.ourtag = tagname
         self.ourlist = marklist
         self.ourindex = markindex
 
@@ -110,6 +111,9 @@ class TagMark:
     def key(self):
         return (self.stamp0, self.stamp1)
 
+    def tag(self):
+        return self.ourtag;
+
     def html(self):
         title = self.title
         if len(title) == 0:
@@ -162,13 +166,13 @@ class TagMark:
         if self.ourindex+1 >= len(self.ourlist):
             return None
         # maybe check here that TagMark returned with nonzero stamp0
-        return TagMark(self.base, self.ourlist, self.ourindex+1)
+        return TagMark(self.base, self.ourtag, self.ourlist, self.ourindex+1)
 
     def pred(self):
         if self.ourindex == 0:
             return None
         # maybe check here that TagMark returned with nonzero stamp0
-        return TagMark(self.base, self.ourlist, self.ourindex-1)
+        return TagMark(self.base, self.ourtag, self.ourlist, self.ourindex-1)
 
 #
 # TagCursor is an iterator class.
@@ -192,7 +196,7 @@ class TagCursor:
     def next(self):
         if self.index >= self.length:
             raise StopIteration
-        mark = TagMark(self.base, self.dlist, self.index)
+        mark = TagMark(self.base, None, self.dlist, self.index)
         self.index += 1
         return mark
 
@@ -235,6 +239,35 @@ class TagBase:
 
     def close(self):
         pass
+
+    def load_tag(self, tag):
+        try:
+            f = open(self.tagdir+"/"+tag, "r")
+        except IOError, e:
+            f = None
+        if f != None:
+            # This can be a long read - tens of thousands of mark keys
+            tagbuf = f.read()
+            f.close()
+        else:
+            tagbuf = ''
+        return tagbuf
+
+    def lookup_name(self, tag, dlist, matchname):
+        ## The antipythonic roll-my-own way:
+        # matchindex = 0
+        # while matchindex < len(dlist):
+        #     if dlist[matchindex] == matchname:
+        #         break
+        #     matchindex += 1
+        # if matchindex == len(dlist):
+        #     return None
+        ## A more pytonic way:
+        try:
+            matchindex = dlist.index(matchname)
+        except ValueError:
+            return None
+        return TagMark(self, tag, dlist, matchindex)
 
     # The add1 constructs key from UNIX seconds.
     def add1(self, timeint, title, url, note, tags):
@@ -282,16 +315,7 @@ class TagBase:
 
         for t in tags:
             # 1. Read
-            try:
-                f = open(self.tagdir+"/"+t, "r")
-            except IOError, e:
-                f = None
-            if f != None:
-                # This can be a long read - tens of thousands of mark keys
-                tagbuf = f.read()
-                f.close()
-            else:
-                tagbuf = ''
+            tagbuf = self.load_tag(t)
             # 2. Modify
             # It would be more efficient to scan by hand instead of splitting,
             # but premature optimization is the root etc.
@@ -314,7 +338,6 @@ class TagBase:
                 matchname = "%010d" % timeint
         else:
                 matchname = "%010d.%02d" % (timeint, fix)
-        # matchname = self.markdir+"/"+markname
 
         # Would be nice to cache the directory in TagBase somewhere.
         # Should we catch OSError here, incase of lookup on un-opened base?
@@ -322,20 +345,34 @@ class TagBase:
         dlist.sort()
         dlist.reverse()
 
-        matchindex = 0
-        while matchindex < len(dlist):
-            if dlist[matchindex] == matchname:
-                break
-            matchindex += 1
-        if matchindex == len(dlist):
-            return None
-        return TagMark(self, dlist, matchindex)
+        return self.lookup_name(None, dlist, matchname)
 
     def first(self):
         dlist = os.listdir(self.markdir)
         dlist.sort()
         dlist.reverse()
-
         if len(dlist) == 0:
             return None
-        return TagMark(self, dlist, 0)
+        return TagMark(self, None, dlist, 0)
+
+    def taglookup(self, tag, timeint, fix):
+        if fix == 0:
+                matchname = "%010d" % timeint
+        else:
+                matchname = "%010d.%02d" % (timeint, fix)
+
+        dlist = split_tags(self.load_tag(tag))
+        dlist.sort()
+        dlist.reverse()
+        if len(dlist) == 0:
+            return None
+
+        return self.lookup_name(tag, dlist, matchname)
+
+    def tagfirst(self, tag):
+        dlist = split_tags(self.load_tag(tag))
+        dlist.sort()
+        dlist.reverse()
+        if len(dlist) == 0:
+            return None
+        return TagMark(self, tag, dlist, 0)

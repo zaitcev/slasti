@@ -7,5 +7,7 @@
 
 class AppError(Exception):
     pass
+class App404Error(Exception):
+    pass
 
 import main, tagbase
