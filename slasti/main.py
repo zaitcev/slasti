@@ -70,6 +70,7 @@ def page_any_html(start_response, pfx, user, base, mark_top):
         what = BLACKSTAR
         path = pfx+'/'+username
     else:
+        what = what+'/'
         path = pfx+'/'+username+'/'+what
 
     start_response("200 OK", [('Content-type', 'text/html')])
@@ -227,6 +228,30 @@ def full_mark_xml(start_response, user, base):
     output.append("</posts>\n")
     return output
 
+def full_tag_html(start_response, pfx, user, base):
+    username = user['name']
+    userpath = pfx+'/'+username
+
+    start_response("200 OK", [('Content-type', 'text/html')])
+    output = ["<html><body>\n"]
+
+    left_lead = '  <h2 style="margin-bottom:0">'+\
+                '<a href="%s/">%s</a> / tags</h2>\n' % \
+                (userpath, username)
+    spit_lead(output, userpath, left_lead)
+
+    output.append("<p>")
+    for tag in base.tagcurs():
+        ref = tag.key()
+        output.append('<a href="%s/%s/">%s</a> %d<br />\n' % \
+                      (userpath, ref, ref, tag.num()))
+    output.append("</p>")
+
+    output.append("<hr />\n")
+
+    output.append("</body></html>\n")
+    return output
+
 #
 # Request paths:
 #   ''                  -- default index (page.XXXX.XX)
@@ -247,6 +272,8 @@ def app(start_response, pfx, user, base, reqpath):
     if reqpath == "newmark":
         start_response("403 Not Permitted", [('Content-type', 'text/plain')])
         return ["New mark does not work yet\r\n"]
+    if reqpath == "tags":
+        return full_tag_html(start_response, pfx, user, base)
     if "/" in reqpath:
         # Trick: by splitting with limit 2 we prevent users from poisoning
         # the tag with slashes. Not that it matters all that much, but still.

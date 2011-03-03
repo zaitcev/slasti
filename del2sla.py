@@ -16,13 +16,22 @@ from xml.etree import ElementTree
 # N.B. This includes app-level generics such as AppError. Any better ideas?
 import slasti
 from slasti import AppError
-from slasti.tagbase import split_tags
 
 TAG = "del2sla"
 
 def Usage():
     print >>sys.stderr, "Usage: "+TAG+" target_dir bookmarks.xml"
     sys.exit(2)
+
+# We are not aware of any specification, so it is unclear if tags are split
+# by space or whitespace. We assume space, to be locale-independent.
+# But this means that we include tabs and foreign whitespace into tags.
+def split_tags(tagstr):
+    tags = []
+    for t in tagstr.split(' '):
+        if t != '':
+            tags.append(t)
+    return tags
 
 def verify_tags(tagstr):
     if "/" in tagstr:
