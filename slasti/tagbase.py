@@ -18,25 +18,35 @@ import cgi
 
 from slasti import AppError
 
-# We are not aware of any specification, so it is unclear if tags are split
-# by space or whitespace. We assume space, to be locale-independent.
-# But this means that we include tabs and foreign whitespace into tags.
-def split_tags(tagstr):
+def split_marks(tagstr):
     tags = []
     for t in tagstr.split(' '):
         if t != '':
             tags.append(t)
     return tags
 
+def load_tag(tagdir, tag):
+    try:
+        f = open(tagdir+"/"+tag, "r")
+    except IOError, e:
+        f = None
+    if f != None:
+        # This can be a long read - tens of thousands of mark keys
+        tagbuf = f.read()
+        f.close()
+    else:
+        tagbuf = ''
+    return tagbuf
+
 #
 # TagMark is one bookmark when we manipulate it (extracted from TagBase).
 #
 class TagMark:
-    def __init__(self, base, tagname, marklist, markindex):
+    def __init__(self, base, fromtag, marklist, markindex):
         markname = marklist[markindex]
 
         self.base = base
-        self.ourtag = tagname
+        self.ourtag = fromtag
         self.ourlist = marklist
         self.ourindex = markindex
 
@@ -98,7 +108,7 @@ class TagMark:
             f.close()
             return
 
-        self.tags = string.split(string.rstrip(s, "\r\n"))
+        self.tags = string.split(string.rstrip(s, "\r\n"), " ")
 
         f.close()
 
@@ -175,9 +185,9 @@ class TagMark:
         return TagMark(self.base, self.ourtag, self.ourlist, self.ourindex-1)
 
 #
-# TagCursor is an iterator class.
+# TagMarkCursor is an iterator class.
 #
-class TagCursor:
+class TagMarkCursor:
     def __init__(self, base):
         self.base = base
         # Apparently Python does not provide opendir() and friends, so our
@@ -202,6 +212,41 @@ class TagCursor:
 
     # def __del__(self):
     #     ......
+
+class TagTag:
+    def __init__(self, base, taglist, tagindex):
+        self.base = base
+        self.ourlist = taglist
+        self.ourindex = tagindex
+
+        self.nmark = len(split_marks(load_tag(base.tagdir, taglist[tagindex])))
+
+    def __str__(self):
+        return self.ourlist[self.ourindex]
+
+    def key(self):
+        return self.ourlist[self.ourindex]
+
+    def num(self):
+        return self.nmark
+
+class TagTagCursor:
+    def __init__(self, base):
+        self.base = base
+        self.dlist = os.listdir(base.tagdir)
+        self.dlist.sort()
+        self.index = 0
+        self.length = len(self.dlist)
+
+    def __iter__(self):
+        return self
+
+    def next(self):
+        if self.index >= self.length:
+            raise StopIteration
+        tag = TagTag(self.base, self.dlist, self.index)
+        self.index += 1
+        return tag
 
 #
 # The open database (any back-end in theory, hardcoded to files for now)
@@ -239,19 +284,6 @@ class TagBase:
 
     def close(self):
         pass
-
-    def load_tag(self, tag):
-        try:
-            f = open(self.tagdir+"/"+tag, "r")
-        except IOError, e:
-            f = None
-        if f != None:
-            # This can be a long read - tens of thousands of mark keys
-            tagbuf = f.read()
-            f.close()
-        else:
-            tagbuf = ''
-        return tagbuf
 
     def lookup_name(self, tag, dlist, matchname):
         ## The antipythonic roll-my-own way:
@@ -315,11 +347,11 @@ class TagBase:
 
         for t in tags:
             # 1. Read
-            tagbuf = self.load_tag(t)
+            tagbuf = load_tag(self.tagdir, t)
             # 2. Modify
             # It would be more efficient to scan by hand instead of splitting,
             # but premature optimization is the root etc.
-            if markname in split_tags(tagbuf):
+            if markname in split_marks(tagbuf):
                 continue
             tagbuf = tagbuf+" "+markname
             # 3. Write
@@ -331,7 +363,7 @@ class TagBase:
             f.close()
 
     def __iter__(self):
-        return TagCursor(self)
+        return TagMarkCursor(self)
 
     def lookup(self, timeint, fix):
         if fix == 0:
@@ -361,7 +393,7 @@ class TagBase:
         else:
                 matchname = "%010d.%02d" % (timeint, fix)
 
-        dlist = split_tags(self.load_tag(tag))
+        dlist = split_marks(load_tag(self.tagdir, tag))
         dlist.sort()
         dlist.reverse()
         if len(dlist) == 0:
@@ -370,9 +402,12 @@ class TagBase:
         return self.lookup_name(tag, dlist, matchname)
 
     def tagfirst(self, tag):
-        dlist = split_tags(self.load_tag(tag))
+        dlist = split_marks(load_tag(self.tagdir, tag))
         dlist.sort()
         dlist.reverse()
         if len(dlist) == 0:
             return None
         return TagMark(self, tag, dlist, 0)
+
+    def tagcurs(self):
+        return TagTagCursor(self)
