@@ -1,5 +1,9 @@
 [root@elanor ~]# ls /usr/lib/slasti-mod/slasti/
 __init__.py  __init__.pyc  tagbase.py  tagbase.pyc
+[root@elanor ~]# ls -F /var/www/slasti/
+zaitcev/
+
+python del2sla.py /var/www/slasti/zaitcev z-delicious.xml
 
 ----- version elanor (mounted to /slasti):
 #
