@@ -67,11 +67,11 @@ def page_any_html(start_response, pfx, user, base, mark_top):
 
     what = mark_top.tag()
     if what == None:
-        what = BLACKSTAR
         path = pfx+'/'+username
+        what = BLACKSTAR
     else:
-        what = what+'/'
         path = pfx+'/'+username+'/'+what
+        what = what+'/'
 
     start_response("200 OK", [('Content-type', 'text/html')])
     output = ["<html><body>\n"]
