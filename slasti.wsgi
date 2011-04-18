@@ -16,7 +16,7 @@ import sys
 # Replaced by  WSGIDaemonProcess slasti python-path=/usr/lib/slasti-mod
 # sys.path = sys.path + [ '/usr/lib/slasti-mod' ]
 import slasti
-from slasti import AppError, App404Error
+from slasti import AppError, App404Error, AppGetError
 
 # The idea here is the same as with the file-backed tags database:
 # something simple to implement but with an API that presumes a higher
@@ -76,6 +76,10 @@ class UserBase:
     #    pass
 
 def do_root(environ, start_response):
+    method = environ['REQUEST_METHOD']
+    if method != 'GET':
+        raise AppGetError(method)
+
     # XXX This really needs some kind of a pretty picture.
     start_response("200 OK", [('Content-type', 'text/plain')])
     return ["Slasti: The Anti-Social Bookmarking\r\n",
@@ -83,6 +87,10 @@ def do_root(environ, start_response):
 
 ## Based on James Gardner's environ dump.
 def do_environ(environ, start_response):
+    method = environ['REQUEST_METHOD']
+    if method != 'GET':
+        raise AppGetError(method)
+
     sorted_keys = environ.keys()
     sorted_keys.sort()
 
@@ -114,6 +122,12 @@ def do_user(environ, start_response, path):
     if pfx != "" and pfx[0] != "/":
         pfx = "/"+pfx
 
+    method = environ['REQUEST_METHOD']
+    if method == 'POST':
+        pinput = environ['wsgi.input'].readline()
+    else:
+        pinput = None
+
     # Query is already split away by the CGI.
     parsed = string.split(path, "/", 2)
 
@@ -130,7 +144,8 @@ def do_user(environ, start_response, path):
         path = parsed[2]
     else:
         path = ""
-    output = slasti.main.app(start_response, pfx, user, base, path)
+    output = slasti.main.app(start_response, pfx, user, base,
+                             method, pinput, path)
 
     base.close()
     return output
@@ -140,28 +155,26 @@ def application(environ, start_response):
     # import os, pwd
     # os.environ["HOME"] = pwd.getpwuid(os.getuid()).pw_dir
 
-    # XXX This is incorrect. Must indentify existing resource or 404 first.
-    if environ['REQUEST_METHOD'] != 'GET':
+    try:
+        path = environ['PATH_INFO']
+        if path == None or path == "" or path == "/":
+            return do_root(environ, start_response)
+        elif path == "/environ":
+            return do_environ(environ, start_response)
+        else:
+            return do_user(environ, start_response, path)
+    except AppError, e:
+        start_response("500 Internal Error",
+                       [('Content-type', 'text/plain')])
+        return [str(e), "\r\n"]
+    except App404Error, e:
+        start_response("404 Not Found",
+                       [('Content-type', 'text/plain')])
+        return [str(e), "\r\n"]
+    except AppGetError, e:
         start_response("405 Method Not Allowed",
                        [('Content-type', 'text/plain'), ('Allow', 'GET')])
-        return ["Method not allowed: ", environ['REQUEST_METHOD']]
-
-    path = environ['PATH_INFO']
-    if path == None or path == "" or path == "/":
-        return do_root(environ, start_response)
-    elif path == "/environ":
-        return do_environ(environ, start_response)
-    else:
-        try:
-            return do_user(environ, start_response, path)
-        except AppError, e:
-            start_response("500 Internal Error",
-                           [('Content-type', 'text/plain')])
-            return [str(e), "\r\n"]
-        except App404Error, e:
-            start_response("404 Not Found",
-                           [('Content-type', 'text/plain')])
-            return [str(e), "\r\n"]
+        return ["Method %s not allowed\r\n" % str(e)]
 
 # We do not have __main__ in WSGI.
 # if __name__.startswith('_mod_wsgi_'):
