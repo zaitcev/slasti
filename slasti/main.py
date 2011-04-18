@@ -51,7 +51,7 @@ def tag_anchor_html(tag, path):
     return ' <a href="%s/%s/">%s</a>' % (path, tagu, tagt)
 
 def spit_lead(output, path, left_lead):
-    output.append('<table width="100%" style="background: #ebf7eb" '+\
+    output.append('<table width="100%" style="background: #ebf7eb" ' +
                   'border=0 cellpadding=1 cellspacing=0><tr valign="top">\n')
     output.append('<td align="left">%s</td>\n' % left_lead)
     output.append('<td align="right">')
@@ -88,7 +88,7 @@ def page_any_html(start_response, pfx, user, base, mark_top):
         (stamp0, stamp1) = mark.key()
         datestr = time.strftime("%Y-%m-%d", time.gmtime(stamp0))
 
-        output.append("<p>%s %s " % \
+        output.append("<p>%s %s " %
                       (datestr, mark_anchor_html(mark, userpath, WHITESTAR)))
         output.append(mark.html())
         output.append("<br>\n")
@@ -243,7 +243,7 @@ def full_tag_html(start_response, pfx, user, base):
     output.append("<p>")
     for tag in base.tagcurs():
         ref = tag.key()
-        output.append('<a href="%s/%s/">%s</a> %d<br />\n' % \
+        output.append('<a href="%s/%s/">%s</a> %d<br />\n' %
                       (userpath, ref, ref, tag.num()))
     output.append("</p>")
 
@@ -291,7 +291,7 @@ def app(start_response, pfx, user, base, reqpath):
         except ValueError:
             raise App404Error("Not found: "+reqpath)
         if p[0] == "page":
-            return page_tag_html(start_response, pfx, user, base, tag, \
+            return page_tag_html(start_response, pfx, user, base, tag,
                                  stamp0, stamp1)
         raise App404Error("Not found: "+reqpath)
     else:
@@ -304,9 +304,9 @@ def app(start_response, pfx, user, base, reqpath):
         except ValueError:
             raise App404Error("Not found: "+reqpath)
         if p[0] == "mark":
-            return one_mark_html(start_response, pfx, user, base, \
+            return one_mark_html(start_response, pfx, user, base,
                                  stamp0, stamp1)
         if p[0] == "page":
-            return page_mark_html(start_response, pfx, user, base, \
+            return page_mark_html(start_response, pfx, user, base,
                                   stamp0, stamp1)
         raise App404Error("Not found: "+reqpath)
