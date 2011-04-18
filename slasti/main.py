@@ -10,7 +10,7 @@ import time
 import urllib
 import cgi
 
-from slasti import AppError, App404Error
+from slasti import AppError, App404Error, AppGetError
 
 PAGESZ = 25
 
@@ -51,7 +51,7 @@ def tag_anchor_html(tag, path):
     return ' <a href="%s/%s/">%s</a>' % (path, tagu, tagt)
 
 def spit_lead(output, path, left_lead):
-    output.append('<table width="100%" style="background: #ebf7eb" '+\
+    output.append('<table width="100%" style="background: #ebf7eb" ' +
                   'border=0 cellpadding=1 cellspacing=0><tr valign="top">\n')
     output.append('<td align="left">%s</td>\n' % left_lead)
     output.append('<td align="right">')
@@ -88,7 +88,7 @@ def page_any_html(start_response, pfx, user, base, mark_top):
         (stamp0, stamp1) = mark.key()
         datestr = time.strftime("%Y-%m-%d", time.gmtime(stamp0))
 
-        output.append("<p>%s %s " % \
+        output.append("<p>%s %s " %
                       (datestr, mark_anchor_html(mark, userpath, WHITESTAR)))
         output.append(mark.html())
         output.append("<br>\n")
@@ -243,7 +243,7 @@ def full_tag_html(start_response, pfx, user, base):
     output.append("<p>")
     for tag in base.tagcurs():
         ref = tag.key()
-        output.append('<a href="%s/%s/">%s</a> %d<br />\n' % \
+        output.append('<a href="%s/%s/">%s</a> %d<br />\n' %
                       (userpath, ref, ref, tag.num()))
     output.append("</p>")
 
@@ -252,6 +252,49 @@ def full_tag_html(start_response, pfx, user, base):
     output.append("</body></html>\n")
     return output
 
+def login_form(start_response, pfx, user, base):
+    username = user['name']
+    userpath = pfx+'/'+username
+
+    start_response("200 OK", [('Content-type', 'text/html')])
+
+    output = ["<html><body>\n"]
+    output.append('<form action="%s/login" method=POST>' % userpath)
+    output.append(
+        '  %s: <input name=password type=password size=32 maxlength=32 />' %
+        username)
+    output.append('  <input name=OK type=submit value="Enter" />\n')
+    output.append('</form>\n')
+    output.append("</body></html>\n")
+    return output
+
+def login_post(start_response, pfx, user, base, pinput):
+
+    # XXX verify encoding application/x-www-form-urlencoded or whatever
+
+    # pinput = "password=test&OK=Enter" and possibly a newline
+
+    response_headers = [('Content-type', 'text/html')]
+    # Set an RFC 2901 cookie (not RFC 2965).
+    response_headers.append(('Set-Cookie', 'moo=a'))
+    start_response("200 OK", response_headers)
+
+    # XXX Replace with going the previous URL or root.
+    output = ["<html><body>\n"]
+    output.append("<p>OK</p>\n")
+    output.append("</body></html>\n")
+    return output
+
+def login(start_response, pfx, user, base, method, pinput):
+    if method == 'GET':
+        return login_form(start_response, pfx, user, base)
+    if method == 'POST':
+        return login_post(start_response, pfx, user, base, pinput)
+    start_response("405 Method Not Allowed",
+                   [('Content-type', 'text/plain'),
+                    ('Allow', 'GET, POST')])
+    return ["Method %s not allowed\r\n" % method]
+
 #
 # Request paths:
 #   ''                  -- default index (page.XXXX.XX)
@@ -259,12 +302,19 @@ def full_tag_html(start_response, pfx, user, base):
 #   mark.1296951840.00
 #   export.xml          -- del-compatible XML
 #   newmark             -- PUT or POST here (XXX protect)
+#   login               -- GET or POST to obtain a cookie (not snoop-proof)
 #   anime/              -- tag (must have slash)
 #   anime/page.1293667202.11  -- tag page off this down
 #   moo.xml/            -- tricky tag
 #   page.1293667202.11/ -- even trickier tag
 #
-def app(start_response, pfx, user, base, reqpath):
+def app(start_response, pfx, user, base, method, pinput, reqpath):
+    if reqpath == "login":
+        return login(start_response, pfx, user, base, method, pinput)
+
+    if method != 'GET':
+        raise AppGetError(method)
+
     if reqpath == "":
         return root_mark_html(start_response, pfx, user, base)
     if reqpath == "export.xml":
@@ -291,7 +341,7 @@ def app(start_response, pfx, user, base, reqpath):
         except ValueError:
             raise App404Error("Not found: "+reqpath)
         if p[0] == "page":
-            return page_tag_html(start_response, pfx, user, base, tag, \
+            return page_tag_html(start_response, pfx, user, base, tag,
                                  stamp0, stamp1)
         raise App404Error("Not found: "+reqpath)
     else:
@@ -304,9 +354,9 @@ def app(start_response, pfx, user, base, reqpath):
         except ValueError:
             raise App404Error("Not found: "+reqpath)
         if p[0] == "mark":
-            return one_mark_html(start_response, pfx, user, base, \
+            return one_mark_html(start_response, pfx, user, base,
                                  stamp0, stamp1)
         if p[0] == "page":
-            return page_mark_html(start_response, pfx, user, base, \
+            return page_mark_html(start_response, pfx, user, base,
                                   stamp0, stamp1)
         raise App404Error("Not found: "+reqpath)
