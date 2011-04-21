@@ -63,7 +63,7 @@ def spit_lead(output, path, left_lead):
     output.append(' [<a href="%s/newmark">n</a>]' % path)
     output.append(' [<a href="%s/export.xml">e</a>]' % path)
     output.append('</td>\n')
-    output.append('</tr></table>')
+    output.append('</tr></table>\n')
 
 def page_any_html(start_response, pfx, user, base, mark_top):
     username = user['name']
