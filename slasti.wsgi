@@ -174,7 +174,7 @@ def application(environ, start_response):
     except AppGetError, e:
         start_response("405 Method Not Allowed",
                        [('Content-type', 'text/plain'), ('Allow', 'GET')])
-        return ["Method %s not allowed\r\n" % str(e)]
+        return ["405 Method %s not allowed\r\n" % str(e)]
 
 # We do not have __main__ in WSGI.
 # if __name__.startswith('_mod_wsgi_'):
