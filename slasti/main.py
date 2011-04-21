@@ -8,7 +8,11 @@
 import string
 import time
 import urllib
+import urlparse
 import cgi
+import base64
+import os
+import hashlib
 
 from slasti import AppError, App404Error, AppGetError
 
@@ -270,13 +274,36 @@ def login_form(start_response, pfx, user, base):
 
 def login_post(start_response, pfx, user, base, pinput):
 
-    # XXX verify encoding application/x-www-form-urlencoded or whatever
-
+    # XXX verify encoding application/x-www-form-urlencoded
     # pinput = "password=test&OK=Enter" and possibly a newline
+    qdic = urlparse.parse_qs(pinput)
+    if not qdic.has_key('password'):
+        start_response("400 Bad Request", [('Content-type', 'text/plain')])
+        return ["400 Bad Request: no password\r\n"]
+    password = qdic['password']
+    if len(password) < 1:
+        start_response("400 Bad Request", [('Content-type', 'text/plain')])
+        return ["400 Bad Request: empty password\r\n"]
+
+    # XXX verify password here - user['salt']+user['pass']
+    # XXX psalt = user['salt']
+
+    # Salt just in case... Not sure if needed (if anyone would ever attack
+    # with precomputed values), but it costs us nothing.
+    csalt = base64.b64encode(os.urandom(6))
+    flags = "-"
+    now = "%d" % int(time.time())
+
+    opdata = csalt+","+flags+","+now
+
+    # XXX replace w/sha256
+    md = hashlib.sha1()
+    md.update(password+opdata)
+    mdstr = base64.b64encode(md.digest())
 
     response_headers = [('Content-type', 'text/html')]
     # Set an RFC 2901 cookie (not RFC 2965).
-    response_headers.append(('Set-Cookie', 'moo=a'))
+    response_headers.append(('Set-Cookie', "login=%s:%s" % (opdata, mdstr)))
     start_response("200 OK", response_headers)
 
     # XXX Replace with going the previous URL or root.
