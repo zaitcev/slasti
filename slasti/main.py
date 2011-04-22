@@ -280,13 +280,28 @@ def login_post(start_response, pfx, user, base, pinput):
     if not qdic.has_key('password'):
         start_response("400 Bad Request", [('Content-type', 'text/plain')])
         return ["400 Bad Request: no password\r\n"]
-    password = qdic['password']
+    plist = qdic['password']
+    if len(plist) < 1:
+        start_response("400 Bad Request", [('Content-type', 'text/plain')])
+        return ["400 Bad Request: screwed password\r\n"]
+    password = plist[0]
     if len(password) < 1:
         start_response("400 Bad Request", [('Content-type', 'text/plain')])
         return ["400 Bad Request: empty password\r\n"]
 
-    # XXX verify password here - user['salt']+user['pass']
-    # XXX psalt = user['salt']
+    if not user.has_key('salt'):
+        raise AppError("User with no salt: "+user['name'])
+    if not user.has_key('pass'):
+        raise AppError("User with no password: "+user['name'])
+
+    pwhash = hashlib.md5()
+    pwhash.update(user['salt']+password)
+    pwstr = pwhash.hexdigest()
+
+    # We operate on a hex of the salted password's digest, to avoid parsing.
+    if pwstr != user['pass']:
+        start_response("403 Not Permitted", [('Content-type', 'text/plain')])
+        return ["403 Not Permitted: Bad Password\r\n"]
 
     # Salt just in case... Not sure if needed (if anyone would ever attack
     # with precomputed values), but it costs us nothing.
@@ -296,10 +311,10 @@ def login_post(start_response, pfx, user, base, pinput):
 
     opdata = csalt+","+flags+","+now
 
-    # XXX replace w/sha256
-    md = hashlib.sha1()
-    md.update(password+opdata)
-    mdstr = base64.b64encode(md.digest())
+    coohash = hashlib.sha256()
+    coohash.update(user['pass']+opdata)
+    # We use hex instead of base64 because it's easy to test in shell.
+    mdstr = coohash.hexdigest()
 
     response_headers = [('Content-type', 'text/html')]
     # Set an RFC 2901 cookie (not RFC 2965).
