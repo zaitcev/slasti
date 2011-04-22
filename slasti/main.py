@@ -289,17 +289,10 @@ def login_post(start_response, pfx, user, base, pinput):
         start_response("400 Bad Request", [('Content-type', 'text/plain')])
         return ["400 Bad Request: empty password\r\n"]
 
-    if not user.has_key('salt'):
-        raise AppError("User with no salt: "+user['name'])
     if not user.has_key('pass'):
         raise AppError("User with no password: "+user['name'])
 
-    pwhash = hashlib.md5()
-    pwhash.update(user['salt']+password)
-    pwstr = pwhash.hexdigest()
-
-    # We operate on a hex of the salted password's digest, to avoid parsing.
-    if pwstr != user['pass']:
+    if password != user['pass']:
         start_response("403 Not Permitted", [('Content-type', 'text/plain')])
         return ["403 Not Permitted: Bad Password\r\n"]
 
@@ -308,11 +301,10 @@ def login_post(start_response, pfx, user, base, pinput):
     csalt = base64.b64encode(os.urandom(6))
     flags = "-"
     now = "%d" % int(time.time())
-
     opdata = csalt+","+flags+","+now
 
     coohash = hashlib.sha256()
-    coohash.update(user['pass']+opdata)
+    coohash.update(password+opdata)
     # We use hex instead of base64 because it's easy to test in shell.
     mdstr = coohash.hexdigest()
 

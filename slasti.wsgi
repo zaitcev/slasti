@@ -38,10 +38,6 @@ class UserBase:
 
         fp.close()
 
-        # [{ 'name':'zaitcev', 'type':'fs', 'root':'/var/www/slasti/zaitcev',
-        #    'salt':'abcdef', 'pass':'7f5da669e900394c5197722f8f9de259' },
-        #  { 'name':'piyokun', 'type':'fs', 'root':'/var/www/slasti/piyokun' }]
-
         # In order to prevent weird tracebacks later, we introspect and make
         # sure that configuration makes sense structurally and that correct
         # fields are present. Using helpful ideas by Andrew "Pixy" Maizels.
