@@ -342,55 +342,55 @@ def login(start_response, pfx, user, base, method, pinput):
 #   moo.xml/            -- tricky tag
 #   page.1293667202.11/ -- even trickier tag
 #
-def app(start_response, pfx, user, base, method, pinput, reqpath):
-    if reqpath == "login":
-        return login(start_response, pfx, user, base, method, pinput)
+def app(start_response, ctx):
+    if ctx.path == "login":
+        return login(start_response, ctx.pfx, ctx.user, ctx.base, ctx.method, ctx.pinput)
 
-    if method != 'GET':
-        raise AppGetError(method)
+    if ctx.method != 'GET':
+        raise AppGetError(ctx.method)
 
-    if reqpath == "":
-        return root_mark_html(start_response, pfx, user, base)
-    if reqpath == "export.xml":
-        return full_mark_xml(start_response, user, base)
-    if reqpath == "newmark":
+    if ctx.path == "":
+        return root_mark_html(start_response, ctx.pfx, ctx.user, ctx.base)
+    if ctx.path == "export.xml":
+        return full_mark_xml(start_response, ctx.user, ctx.base)
+    if ctx.path == "newmark":
         start_response("403 Not Permitted", [('Content-type', 'text/plain')])
         return ["New mark does not work yet\r\n"]
-    if reqpath == "tags":
-        return full_tag_html(start_response, pfx, user, base)
-    if "/" in reqpath:
+    if ctx.path == "tags":
+        return full_tag_html(start_response, ctx.pfx, ctx.user, ctx.base)
+    if "/" in ctx.path:
         # Trick: by splitting with limit 2 we prevent users from poisoning
         # the tag with slashes. Not that it matters all that much, but still.
-        p = string.split(reqpath, "/", 2)
+        p = string.split(ctx.path, "/", 2)
         tag = p[0]
         page = p[1]
         if page == "":
-            return root_tag_html(start_response, pfx, user, base, tag)
+            return root_tag_html(start_response, ctx.pfx, ctx.user, ctx.base, tag)
         p = string.split(page, ".")
         if len(p) != 3:
-            raise App404Error("Not found: "+reqpath)
+            raise App404Error("Not found: "+ctx.path)
         try:
             stamp0 = int(p[1])
             stamp1 = int(p[2])
         except ValueError:
-            raise App404Error("Not found: "+reqpath)
+            raise App404Error("Not found: "+ctx.path)
         if p[0] == "page":
-            return page_tag_html(start_response, pfx, user, base, tag,
+            return page_tag_html(start_response, ctx.pfx, ctx.user, ctx.base, tag,
                                  stamp0, stamp1)
-        raise App404Error("Not found: "+reqpath)
+        raise App404Error("Not found: "+ctx.path)
     else:
-        p = string.split(reqpath, ".")
+        p = string.split(ctx.path, ".")
         if len(p) != 3:
-            raise App404Error("Not found: "+reqpath)
+            raise App404Error("Not found: "+ctx.path)
         try:
             stamp0 = int(p[1])
             stamp1 = int(p[2])
         except ValueError:
-            raise App404Error("Not found: "+reqpath)
+            raise App404Error("Not found: "+ctx.path)
         if p[0] == "mark":
-            return one_mark_html(start_response, pfx, user, base,
+            return one_mark_html(start_response, ctx.pfx, ctx.user, ctx.base,
                                  stamp0, stamp1)
         if p[0] == "page":
-            return page_mark_html(start_response, pfx, user, base,
+            return page_mark_html(start_response, ctx.pfx, ctx.user, ctx.base,
                                   stamp0, stamp1)
-        raise App404Error("Not found: "+reqpath)
+        raise App404Error("Not found: "+ctx.path)

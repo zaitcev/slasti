@@ -141,8 +141,8 @@ def do_user(environ, start_response, path):
         path = parsed[2]
     else:
         path = ""
-    output = slasti.main.app(start_response, pfx, user, base,
-                             method, pinput, path)
+    ctx = slasti.Context(pfx, user, base, method, path, pinput)
+    output = slasti.main.app(start_response, ctx)
 
     base.close()
     return output
