@@ -55,27 +55,34 @@ def tag_anchor_html(tag, path):
     tagt = cgi.escape(tag)
     return ' <a href="%s/%s/">%s</a>' % (path, tagu, tagt)
 
-def spit_lead(output, path, left_lead):
+def spit_lead(output, ctx, left_lead):
+    path = ctx.prefix+'/'+ctx.user['name']
+
     output.append('<table width="100%" style="background: #ebf7eb" ' +
                   'border=0 cellpadding=1 cellspacing=0><tr valign="top">\n')
     output.append('<td align="left">%s</td>\n' % left_lead)
     output.append('<td align="right">')
+    if ctx.flogin == 0:
+        output.append(' [<a href="%s/login">login</a>]' % path)
     output.append(' [<a href="%s/tags">tags</a>]' % path)
     output.append(' [<a href="%s/newmark">n</a>]' % path)
-    output.append(' [<a href="%s/export.xml">e</a>]' % path)
+    if ctx.flogin == 0:
+        output.append(' [e]')
+    else:
+        output.append(' [<a href="%s/export.xml">e</a>]' % path)
     output.append('</td>\n')
     output.append('</tr></table>\n')
 
-def page_any_html(start_response, pfx, user, base, mark_top):
-    username = user['name']
-    userpath = pfx+'/'+username
+def page_any_html(start_response, ctx, mark_top):
+    username = ctx.user['name']
+    userpath = ctx.prefix+'/'+username
 
     what = mark_top.tag()
     if what == None:
-        path = pfx+'/'+username
+        path = ctx.prefix+'/'+username
         what = BLACKSTAR
     else:
-        path = pfx+'/'+username+'/'+what
+        path = ctx.prefix+'/'+username+'/'+what
         what = what+'/'
 
     start_response("200 OK", [('Content-type', 'text/html')])
@@ -84,7 +91,7 @@ def page_any_html(start_response, pfx, user, base, mark_top):
     left_lead = '  <h2 style="margin-bottom:0">'+\
                 '<a href="%s/">%s</a> / %s</h2>\n' % \
              (userpath, username, what)
-    spit_lead(output, userpath, left_lead)
+    spit_lead(output, ctx, left_lead)
 
     mark = mark_top
     mark_next = None
@@ -116,30 +123,28 @@ def page_any_html(start_response, pfx, user, base, mark_top):
     output.append("</body></html>\n")
     return output
 
-def page_mark_html(start_response, pfx, user, base, stamp0, stamp1):
-    mark = base.lookup(stamp0, stamp1)
+def page_mark_html(start_response, ctx, stamp0, stamp1):
+    mark = ctx.base.lookup(stamp0, stamp1)
     if mark == None:
         # We have to have at least one mark to display a page
         raise App404Error("Page not found: "+str(stamp0)+"."+str(stamp1))
-    return page_any_html(start_response, pfx, user, base, mark)
+    return page_any_html(start_response, ctx, mark)
 
-def page_tag_html(start_response, pfx, user, base, tag, stamp0, stamp1):
-    mark = base.taglookup(tag, stamp0, stamp1)
+def page_tag_html(start_response, ctx, tag, stamp0, stamp1):
+    mark = ctx.base.taglookup(tag, stamp0, stamp1)
     if mark == None:
         raise App404Error("Tag page not found: "+tag+" / "+\
                            str(stamp0)+"."+str(stamp1))
-    return page_any_html(start_response, pfx, user, base, mark)
+    return page_any_html(start_response, ctx, mark)
 
-def page_empty_html(start_response, pfx, user, base):
-    path = pfx+'/'+user['name']
-
+def page_empty_html(start_response, ctx):
     start_response("200 OK", [('Content-type', 'text/html')])
     output = ["<html><body>\n"]
 
     left_lead = '  <h2 style="margin-bottom:0">'+\
                 '<a href="%s/">%s</a> / [-]</h2>\n' % \
-                (path, user['name'])
-    spit_lead(output, path, left_lead)
+                (path, ctx.user['name'])
+    spit_lead(output, ctx, left_lead)
 
     output.append("<hr />\n")
     output.append('[-] [-] [-]')
@@ -148,20 +153,20 @@ def page_empty_html(start_response, pfx, user, base):
     output.append("</body></html>\n")
     return output
 
-def one_mark_html(start_response, pfx, user, base, stamp0, stamp1):
-    mark = base.lookup(stamp0, stamp1)
+def one_mark_html(start_response, ctx, stamp0, stamp1):
+    mark = ctx.base.lookup(stamp0, stamp1)
     if mark == None:
         raise App404Error("Mark not found: "+str(stamp0)+"."+str(stamp1))
 
-    path = pfx+'/'+user['name']
+    path = ctx.prefix+'/'+ctx.user['name']
 
     start_response("200 OK", [('Content-type', 'text/html')])
     output = ["<html><body>\n"]
 
     left_lead = '  <h2 style="margin-bottom:0">'+\
                 '<a href="%s/">%s</a></h2>\n' % \
-                (path, user['name'])
-    spit_lead(output, path, left_lead)
+                (path, ctx.user['name'])
+    spit_lead(output, ctx, left_lead)
 
     output.append("<p>")
     datestr = time.strftime("%Y-%m-%d", time.gmtime(stamp0))
@@ -182,11 +187,11 @@ def one_mark_html(start_response, pfx, user, base, stamp0, stamp1):
     output.append("</body></html>\n")
     return output
 
-def root_mark_html(start_response, pfx, user, base):
-    mark = base.first()
+def root_mark_html(start_response, ctx):
+    mark = ctx.base.first()
     if mark == None:
-        return page_empty_html(start_response, pfx, user, base)
-    return page_any_html(start_response, pfx, user, base, mark)
+        return page_empty_html(start_response, ctx)
+    return page_any_html(start_response, ctx, mark)
     ## The non-paginated version
     #
     # response_headers = [('Content-type', 'text/html')]
@@ -196,7 +201,7 @@ def root_mark_html(start_response, pfx, user, base):
     # left_lead = '  <h2 style="margin-bottom:0">'+\
     #             '<a href="%s/">%s</a></h2>\n' % \
     #             (path, user['name']))
-    # spit_lead(output, path, left_lead)
+    # spit_lead(output, ctx, left_lead)
     #
     # for mark in base:
     #     (stamp0, stamp1) = mark.key()
@@ -210,12 +215,12 @@ def root_mark_html(start_response, pfx, user, base):
     # output.append("</body></html>\n")
     # return output
 
-def root_tag_html(start_response, pfx, user, base, tag):
-    mark = base.tagfirst(tag)
+def root_tag_html(start_response, ctx, tag):
+    mark = ctx.base.tagfirst(tag)
     if mark == None:
         # Not sure if this may happen legitimately, so 404 for now.
         raise App404Error("Tag page not found: "+tag)
-    return page_any_html(start_response, pfx, user, base, mark)
+    return page_any_html(start_response, ctx, mark)
 
 # full_mark_html() would be a Netscape bookmarks file, perhaps.
 def full_mark_xml(start_response, user, base):
@@ -233,9 +238,9 @@ def full_mark_xml(start_response, user, base):
     output.append("</posts>\n")
     return output
 
-def full_tag_html(start_response, pfx, user, base):
-    username = user['name']
-    userpath = pfx+'/'+username
+def full_tag_html(start_response, ctx):
+    username = ctx.user['name']
+    userpath = ctx.prefix+'/'+username
 
     start_response("200 OK", [('Content-type', 'text/html')])
     output = ["<html><body>\n"]
@@ -243,10 +248,10 @@ def full_tag_html(start_response, pfx, user, base):
     left_lead = '  <h2 style="margin-bottom:0">'+\
                 '<a href="%s/">%s</a> / tags</h2>\n' % \
                 (userpath, username)
-    spit_lead(output, userpath, left_lead)
+    spit_lead(output, ctx, left_lead)
 
     output.append("<p>")
-    for tag in base.tagcurs():
+    for tag in ctx.base.tagcurs():
         ref = tag.key()
         output.append('<a href="%s/%s/">%s</a> %d<br />\n' %
                       (userpath, ref, ref, tag.num()))
@@ -257,9 +262,9 @@ def full_tag_html(start_response, pfx, user, base):
     output.append("</body></html>\n")
     return output
 
-def login_form(start_response, pfx, user, base):
-    username = user['name']
-    userpath = pfx+'/'+username
+def login_form(start_response, ctx):
+    username = ctx.user['name']
+    userpath = ctx.prefix+'/'+username
 
     start_response("200 OK", [('Content-type', 'text/html')])
 
@@ -301,8 +306,8 @@ def login_post(start_response, ctx):
     # with precomputed values), but it costs us nothing.
     csalt = base64.b64encode(os.urandom(6))
     flags = "-"
-    now = "%d" % int(time.time())
-    opdata = csalt+","+flags+","+now
+    nowstr = "%d" % int(time.time())
+    opdata = csalt+","+flags+","+nowstr
 
     coohash = hashlib.sha256()
     coohash.update(password+opdata)
@@ -322,13 +327,43 @@ def login_post(start_response, ctx):
 
 def login(start_response, ctx):
     if ctx.method == 'GET':
-        return login_form(start_response, ctx.prefix, ctx.user, ctx.base)
+        return login_form(start_response, ctx)
     if ctx.method == 'POST':
         return login_post(start_response, ctx)
     start_response("405 Method Not Allowed",
                    [('Content-type', 'text/plain'),
                     ('Allow', 'GET, POST')])
     return ["405 Method %s not allowed\r\n" % ctx.method]
+
+def login_verify(ctx):
+    if not ctx.user.has_key('pass'):
+        return 0
+    if ctx.cookies == None:
+        return 0
+    if not ctx.cookies.has_key('login'):
+        return 0
+
+    cval = ctx.cookies['login'].value
+    (opdata, xhash) = cval.split(':')
+    (csalt,flags,whenstr) = opdata.split(',')
+    try:
+        when = int(whenstr)
+    except ValueError:
+        return 0
+    now = int(time.time())
+    if now < when:
+        return 0
+    if flags != '-':
+        return 0
+
+    coohash = hashlib.sha256()
+    coohash.update(ctx.user['pass']+opdata)
+    mdstr = coohash.hexdigest()
+
+    if mdstr != xhash:
+        return 0
+
+    return 1
 
 #
 # Request paths:
@@ -344,6 +379,8 @@ def login(start_response, ctx):
 #   page.1293667202.11/ -- even trickier tag
 #
 def app(start_response, ctx):
+    ctx.flogin = login_verify(ctx)
+
     if ctx.path == "login":
         return login(start_response, ctx)
 
@@ -351,14 +388,18 @@ def app(start_response, ctx):
         raise AppGetError(ctx.method)
 
     if ctx.path == "":
-        return root_mark_html(start_response, ctx.prefix, ctx.user, ctx.base)
+        return root_mark_html(start_response, ctx)
     if ctx.path == "export.xml":
+        if ctx.flogin == 0:
+            start_response("403 Not Permitted",
+                           [('Content-type', 'text/plain')])
+            return ["403 Not Logged In\r\n"]
         return full_mark_xml(start_response, ctx.user, ctx.base)
     if ctx.path == "newmark":
         start_response("403 Not Permitted", [('Content-type', 'text/plain')])
         return ["New mark does not work yet\r\n"]
     if ctx.path == "tags":
-        return full_tag_html(start_response, ctx.prefix, ctx.user, ctx.base)
+        return full_tag_html(start_response, ctx)
     if "/" in ctx.path:
         # Trick: by splitting with limit 2 we prevent users from poisoning
         # the tag with slashes. Not that it matters all that much, but still.
@@ -366,7 +407,7 @@ def app(start_response, ctx):
         tag = p[0]
         page = p[1]
         if page == "":
-            return root_tag_html(start_response, ctx.prefix, ctx.user, ctx.base, tag)
+            return root_tag_html(start_response, ctx, tag)
         p = string.split(page, ".")
         if len(p) != 3:
             raise App404Error("Not found: "+ctx.path)
@@ -376,8 +417,7 @@ def app(start_response, ctx):
         except ValueError:
             raise App404Error("Not found: "+ctx.path)
         if p[0] == "page":
-            return page_tag_html(start_response, ctx.prefix, ctx.user, ctx.base, tag,
-                                 stamp0, stamp1)
+            return page_tag_html(start_response, ctx, tag, stamp0, stamp1)
         raise App404Error("Not found: "+ctx.path)
     else:
         p = string.split(ctx.path, ".")
@@ -389,9 +429,7 @@ def app(start_response, ctx):
         except ValueError:
             raise App404Error("Not found: "+ctx.path)
         if p[0] == "mark":
-            return one_mark_html(start_response, ctx.prefix, ctx.user, ctx.base,
-                                 stamp0, stamp1)
+            return one_mark_html(start_response, ctx, stamp0, stamp1)
         if p[0] == "page":
-            return page_mark_html(start_response, ctx.prefix, ctx.user, ctx.base,
-                                  stamp0, stamp1)
+            return page_mark_html(start_response, ctx, stamp0, stamp1)
         raise App404Error("Not found: "+ctx.path)

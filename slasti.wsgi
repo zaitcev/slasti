@@ -146,6 +146,8 @@ def do_user(environ, start_response, path):
     except Cookie.CookieError, e:
         start_response("400 Bad Request", [('Content-type', 'text/plain')])
         return ["400 Bad Cookie: "+str(e)+"\r\n"]
+    except KeyError:
+        c = None
 
     base = slasti.tagbase.TagBase(user['root'])
     base.open()
