@@ -9,6 +9,7 @@ import string
 import json
 import types
 import sys
+import Cookie
 
 # CFGUSERS was replaced by  SetEnv slasti.userconf /slasti-users.conf
 # CFGUSERS = "/etc/slasti-users.conf"
@@ -134,14 +135,22 @@ def do_user(environ, start_response, path):
     if user['type'] != 'fs':
         raise AppError("Unknown type of user: "+parsed[1])
 
-    base = slasti.tagbase.TagBase(user['root'])
-    base.open()
-
     if len(parsed) >= 3:
         path = parsed[2]
     else:
         path = ""
-    ctx = slasti.Context(pfx, user, base, method, path, pinput)
+
+    c = Cookie.SimpleCookie()
+    try:
+        c.load(environ['HTTP_COOKIE'])
+    except Cookie.CookieError, e:
+        start_response("400 Bad Request", [('Content-type', 'text/plain')])
+        return ["400 Bad Cookie: "+str(e)+"\r\n"]
+
+    base = slasti.tagbase.TagBase(user['root'])
+    base.open()
+
+    ctx = slasti.Context(pfx, user, base, method, path, pinput, c)
     output = slasti.main.app(start_response, ctx)
 
     base.close()

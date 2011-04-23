@@ -13,6 +13,7 @@ import cgi
 import base64
 import os
 import hashlib
+import Cookie
 
 from slasti import AppError, App404Error, AppGetError
 
@@ -272,11 +273,11 @@ def login_form(start_response, pfx, user, base):
     output.append("</body></html>\n")
     return output
 
-def login_post(start_response, pfx, user, base, pinput):
+def login_post(start_response, ctx):
 
     # XXX verify encoding application/x-www-form-urlencoded
     # pinput = "password=test&OK=Enter" and possibly a newline
-    qdic = urlparse.parse_qs(pinput)
+    qdic = urlparse.parse_qs(ctx.pinput)
     if not qdic.has_key('password'):
         start_response("400 Bad Request", [('Content-type', 'text/plain')])
         return ["400 Bad Request: no password\r\n"]
@@ -289,10 +290,10 @@ def login_post(start_response, pfx, user, base, pinput):
         start_response("400 Bad Request", [('Content-type', 'text/plain')])
         return ["400 Bad Request: empty password\r\n"]
 
-    if not user.has_key('pass'):
-        raise AppError("User with no password: "+user['name'])
+    if not ctx.user.has_key('pass'):
+        raise AppError("User with no password: "+ctx.user['name'])
 
-    if password != user['pass']:
+    if password != ctx.user['pass']:
         start_response("403 Not Permitted", [('Content-type', 'text/plain')])
         return ["403 Not Permitted: Bad Password\r\n"]
 
@@ -319,15 +320,15 @@ def login_post(start_response, pfx, user, base, pinput):
     output.append("</body></html>\n")
     return output
 
-def login(start_response, pfx, user, base, method, pinput):
-    if method == 'GET':
-        return login_form(start_response, pfx, user, base)
-    if method == 'POST':
-        return login_post(start_response, pfx, user, base, pinput)
+def login(start_response, ctx):
+    if ctx.method == 'GET':
+        return login_form(start_response, ctx.prefix, ctx.user, ctx.base)
+    if ctx.method == 'POST':
+        return login_post(start_response, ctx)
     start_response("405 Method Not Allowed",
                    [('Content-type', 'text/plain'),
                     ('Allow', 'GET, POST')])
-    return ["405 Method %s not allowed\r\n" % method]
+    return ["405 Method %s not allowed\r\n" % ctx.method]
 
 #
 # Request paths:
@@ -344,20 +345,20 @@ def login(start_response, pfx, user, base, method, pinput):
 #
 def app(start_response, ctx):
     if ctx.path == "login":
-        return login(start_response, ctx.pfx, ctx.user, ctx.base, ctx.method, ctx.pinput)
+        return login(start_response, ctx)
 
     if ctx.method != 'GET':
         raise AppGetError(ctx.method)
 
     if ctx.path == "":
-        return root_mark_html(start_response, ctx.pfx, ctx.user, ctx.base)
+        return root_mark_html(start_response, ctx.prefix, ctx.user, ctx.base)
     if ctx.path == "export.xml":
         return full_mark_xml(start_response, ctx.user, ctx.base)
     if ctx.path == "newmark":
         start_response("403 Not Permitted", [('Content-type', 'text/plain')])
         return ["New mark does not work yet\r\n"]
     if ctx.path == "tags":
-        return full_tag_html(start_response, ctx.pfx, ctx.user, ctx.base)
+        return full_tag_html(start_response, ctx.prefix, ctx.user, ctx.base)
     if "/" in ctx.path:
         # Trick: by splitting with limit 2 we prevent users from poisoning
         # the tag with slashes. Not that it matters all that much, but still.
@@ -365,7 +366,7 @@ def app(start_response, ctx):
         tag = p[0]
         page = p[1]
         if page == "":
-            return root_tag_html(start_response, ctx.pfx, ctx.user, ctx.base, tag)
+            return root_tag_html(start_response, ctx.prefix, ctx.user, ctx.base, tag)
         p = string.split(page, ".")
         if len(p) != 3:
             raise App404Error("Not found: "+ctx.path)
@@ -375,7 +376,7 @@ def app(start_response, ctx):
         except ValueError:
             raise App404Error("Not found: "+ctx.path)
         if p[0] == "page":
-            return page_tag_html(start_response, ctx.pfx, ctx.user, ctx.base, tag,
+            return page_tag_html(start_response, ctx.prefix, ctx.user, ctx.base, tag,
                                  stamp0, stamp1)
         raise App404Error("Not found: "+ctx.path)
     else:
@@ -388,9 +389,9 @@ def app(start_response, ctx):
         except ValueError:
             raise App404Error("Not found: "+ctx.path)
         if p[0] == "mark":
-            return one_mark_html(start_response, ctx.pfx, ctx.user, ctx.base,
+            return one_mark_html(start_response, ctx.prefix, ctx.user, ctx.base,
                                  stamp0, stamp1)
         if p[0] == "page":
-            return page_mark_html(start_response, ctx.pfx, ctx.user, ctx.base,
+            return page_mark_html(start_response, ctx.prefix, ctx.user, ctx.base,
                                   stamp0, stamp1)
         raise App404Error("Not found: "+ctx.path)

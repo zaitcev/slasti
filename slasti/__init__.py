@@ -13,9 +13,9 @@ class AppGetError(Exception):
     pass
 
 class Context:
-    def __init__(self, pfx, user, base, method, path, pinput):
+    def __init__(self, pfx, user, base, method, path, pinput, coos):
         # prefix: Path where the application is mounted in WSGI or empty string.
-        self.pfx = pfx;
+        self.prefix = pfx;
         # user: Username.
         self.user = user;
         # base: The open tag database for the user.
@@ -27,5 +27,7 @@ class Context:
         self.path = path;
         # pinput: The 1 line of input for POST.
         self.pinput = pinput;
+        # cookies: Cookie class.
+        self.cookies = coos;
 
 import main, tagbase
