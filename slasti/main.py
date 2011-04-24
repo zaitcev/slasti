@@ -48,6 +48,13 @@ def mark_anchor_html(mark, path, text):
     (stamp0, stamp1) = mark.key()
     return '[<a href="%s/mark.%d.%02d">%s</a>]' % (path, stamp0, stamp1, text)
 
+def edit_anchor_html(mark, path, text):
+    if mark == None:
+        return '[-]'
+    (stamp0, stamp1) = mark.key()
+    return '[<a href="%s/edit?mark=%d.%02d">%s</a>]' % \
+           (path, stamp0, stamp1, text)
+
 def tag_anchor_html(tag, path):
     if tag == None:
         return ' -'
@@ -64,8 +71,8 @@ def spit_lead(output, ctx, left_lead):
     output.append('<td align="right">')
     if ctx.flogin == 0:
         output.append(' [<a href="%s/login">login</a>]' % path)
-    output.append(' [<a href="%s/tags">tags</a>]' % path)
-    output.append(' [<a href="%s/newmark">n</a>]' % path)
+    output.append(' [<b><a href="%s/tags">tags</a></b>]' % path)
+    output.append(' [<a href="%s/edit">new</a>]' % path)
     if ctx.flogin == 0:
         output.append(' [e]')
     else:
@@ -90,7 +97,7 @@ def page_any_html(start_response, ctx, mark_top):
 
     left_lead = '  <h2 style="margin-bottom:0">'+\
                 '<a href="%s/">%s</a> / %s</h2>\n' % \
-             (userpath, username, what)
+                (userpath, username, what)
     spit_lead(output, ctx, left_lead)
 
     mark = mark_top
@@ -133,7 +140,7 @@ def page_mark_html(start_response, ctx, stamp0, stamp1):
 def page_tag_html(start_response, ctx, tag, stamp0, stamp1):
     mark = ctx.base.taglookup(tag, stamp0, stamp1)
     if mark == None:
-        raise App404Error("Tag page not found: "+tag+" / "+\
+        raise App404Error("Tag page not found: "+tag+" / "+
                            str(stamp0)+"."+str(stamp1))
     return page_any_html(start_response, ctx, mark)
 
@@ -180,7 +187,10 @@ def one_mark_html(start_response, ctx, stamp0, stamp1):
 
     output.append("<hr />\n")
     output.append(mark_anchor_html(mark.pred(), path, "&laquo;"))
-    output.append(mark_anchor_html(mark,        path, WHITESTAR))
+    if ctx.flogin == 0:
+        output.append("["+WHITESTAR+"]")
+    else:
+        output.append(edit_anchor_html(mark,        path, WHITESTAR))
     output.append(mark_anchor_html(mark.succ(), path, "&raquo;"))
     output.append("<br />\n")
 
@@ -365,13 +375,36 @@ def login_verify(ctx):
 
     return 1
 
+def edit_form(start_response, ctx):
+    if ctx.query == None:
+        output = ["New\r\n"]
+    else:
+        output = ["%s\r\n" % ctx.query]
+    start_response("403 Not Permitted", [('Content-type', 'text/plain')])
+    output.append("Edit does not work yet\r\n")
+    return output
+
+def edit_post(start_response, ctx):
+    start_response("403 Not Permitted", [('Content-type', 'text/plain')])
+    return ["Post mark does not work yet\r\n"]
+
+def edit(start_response, ctx):
+    if ctx.method == 'GET':
+        return edit_form(start_response, ctx)
+    if ctx.method == 'POST':
+        return edit_post(start_response, ctx)
+    start_response("405 Method Not Allowed",
+                   [('Content-type', 'text/plain'),
+                    ('Allow', 'GET, POST')])
+    return ["405 Method %s not allowed\r\n" % ctx.method]
+
 #
 # Request paths:
 #   ''                  -- default index (page.XXXX.XX)
 #   page.1296951840.00  -- page off this down
 #   mark.1296951840.00
 #   export.xml          -- del-compatible XML
-#   newmark             -- PUT or POST here (XXX protect)
+#   edit                -- PUT or POST here (XXX protect)
 #   login               -- GET or POST to obtain a cookie (not snoop-proof)
 #   anime/              -- tag (must have slash)
 #   anime/page.1293667202.11  -- tag page off this down
@@ -383,6 +416,8 @@ def app(start_response, ctx):
 
     if ctx.path == "login":
         return login(start_response, ctx)
+    if ctx.path == "edit":
+        return edit(start_response, ctx)
 
     if ctx.method != 'GET':
         raise AppGetError(ctx.method)
@@ -395,9 +430,6 @@ def app(start_response, ctx):
                            [('Content-type', 'text/plain')])
             return ["403 Not Logged In\r\n"]
         return full_mark_xml(start_response, ctx.user, ctx.base)
-    if ctx.path == "newmark":
-        start_response("403 Not Permitted", [('Content-type', 'text/plain')])
-        return ["New mark does not work yet\r\n"]
     if ctx.path == "tags":
         return full_tag_html(start_response, ctx)
     if "/" in ctx.path:

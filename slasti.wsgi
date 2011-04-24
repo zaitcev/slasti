@@ -140,6 +140,11 @@ def do_user(environ, start_response, path):
     else:
         path = ""
 
+    try:
+        q = environ['QUERY_STRING']
+    except KeyError:
+        q = None
+
     c = Cookie.SimpleCookie()
     try:
         c.load(environ['HTTP_COOKIE'])
@@ -152,7 +157,7 @@ def do_user(environ, start_response, path):
     base = slasti.tagbase.TagBase(user['root'])
     base.open()
 
-    ctx = slasti.Context(pfx, user, base, method, path, pinput, c)
+    ctx = slasti.Context(pfx, user, base, method, path, q, pinput, c)
     output = slasti.main.app(start_response, ctx)
 
     base.close()

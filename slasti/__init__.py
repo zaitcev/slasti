@@ -13,7 +13,7 @@ class AppGetError(Exception):
     pass
 
 class Context:
-    def __init__(self, pfx, user, base, method, path, pinput, coos):
+    def __init__(self, pfx, user, base, method, path, query, pinput, coos):
         # prefix: Path where the application is mounted in WSGI or empty string.
         self.prefix = pfx
         # user: Username.
@@ -25,6 +25,8 @@ class Context:
         # path: The remaining path after the user. Not the full URL path.
         # This may be empty (we permit user with no trailing slash).
         self.path = path
+        # query: The query string
+        self.query = query
         # pinput: The 1 line of input for POST.
         self.pinput = pinput
         # cookies: Cookie class. May be None.
