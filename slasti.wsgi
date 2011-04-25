@@ -17,7 +17,7 @@ import Cookie
 # Replaced by  WSGIDaemonProcess slasti python-path=/usr/lib/slasti-mod
 # sys.path = sys.path + [ '/usr/lib/slasti-mod' ]
 import slasti
-from slasti import AppError, App404Error, AppGetError
+from slasti import AppError, App400Error, App404Error, AppGetError
 
 # The idea here is the same as with the file-backed tags database:
 # something simple to implement but with an API that presumes a higher
@@ -177,12 +177,13 @@ def application(environ, start_response):
         else:
             return do_user(environ, start_response, path)
     except AppError, e:
-        start_response("500 Internal Error",
-                       [('Content-type', 'text/plain')])
+        start_response("500 Internal Error", [('Content-type', 'text/plain')])
         return [str(e), "\r\n"]
+    except App400Error, e:
+        start_response("400 Bad Request", [('Content-type', 'text/plain')])
+        return ["400 Bad Request: %s\r\n" % str(e)]
     except App404Error, e:
-        start_response("404 Not Found",
-                       [('Content-type', 'text/plain')])
+        start_response("404 Not Found", [('Content-type', 'text/plain')])
         return [str(e), "\r\n"]
     except AppGetError, e:
         start_response("405 Method Not Allowed",

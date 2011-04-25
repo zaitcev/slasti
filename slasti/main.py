@@ -15,7 +15,7 @@ import os
 import hashlib
 import Cookie
 
-from slasti import AppError, App404Error, AppGetError
+from slasti import AppError, App400Error, App404Error, AppGetError
 
 PAGESZ = 25
 
@@ -185,12 +185,15 @@ def one_mark_html(start_response, ctx, stamp0, stamp1):
         output.append(tag_anchor_html(tag, path))
     output.append("</p>\n")
 
+    # This looks ugly in browser.
+    if ctx.flogin != 0:
+       output.append("<p>")
+       output.append(edit_anchor_html(mark, path, "edit"))
+       output.append("</p>\n")
+
     output.append("<hr />\n")
     output.append(mark_anchor_html(mark.pred(), path, "&laquo;"))
-    if ctx.flogin == 0:
-        output.append("["+WHITESTAR+"]")
-    else:
-        output.append(edit_anchor_html(mark,        path, WHITESTAR))
+    output.append(mark_anchor_html(mark,        path, WHITESTAR))
     output.append(mark_anchor_html(mark.succ(), path, "&raquo;"))
     output.append("<br />\n")
 
@@ -210,7 +213,7 @@ def root_mark_html(start_response, ctx):
     #
     # left_lead = '  <h2 style="margin-bottom:0">'+\
     #             '<a href="%s/">%s</a></h2>\n' % \
-    #             (path, user['name']))
+    #             (ctx.path, ctx.user['name']))
     # spit_lead(output, ctx, left_lead)
     #
     # for mark in base:
@@ -218,7 +221,7 @@ def root_mark_html(start_response, ctx):
     #     datestr = time.strftime("%Y-%m-%d", time.gmtime(stamp0))
     #
     #     output.append("<p>%s %s " % \
-    #                   (datestr, mark_anchor_html(mark, path, WHITESTAR)))
+    #                   (datestr, mark_anchor_html(mark, ctx.path, WHITESTAR)))
     #     output.append(mark.html())
     #     output.append("</p>\n")
     #
@@ -294,16 +297,13 @@ def login_post(start_response, ctx):
     # pinput = "password=test&OK=Enter" and possibly a newline
     qdic = urlparse.parse_qs(ctx.pinput)
     if not qdic.has_key('password'):
-        start_response("400 Bad Request", [('Content-type', 'text/plain')])
-        return ["400 Bad Request: no password\r\n"]
+        raise App400Error("no password tag")
     plist = qdic['password']
     if len(plist) < 1:
-        start_response("400 Bad Request", [('Content-type', 'text/plain')])
-        return ["400 Bad Request: screwed password\r\n"]
+        raise App400Error("bad password tag")
     password = plist[0]
     if len(password) < 1:
-        start_response("400 Bad Request", [('Content-type', 'text/plain')])
-        return ["400 Bad Request: empty password\r\n"]
+        raise App400Error("empty password")
 
     if not ctx.user.has_key('pass'):
         raise AppError("User with no password: "+ctx.user['name'])
@@ -375,13 +375,102 @@ def login_verify(ctx):
 
     return 1
 
+def edit_findmark(ctx, query):
+    if query == None or query == "":
+        return None
+
+    qdic = urlparse.parse_qs(query)
+    if not qdic.has_key('mark'):
+        raise App400Error("no mark tag")
+    mlist = qdic['mark']
+    if len(mlist) < 1:
+        raise App400Error("bad mark tag")
+    p = string.split(mlist[0], ".")
+    if len(p) != 2:
+        raise App400Error("bad mark format")
+    try:
+        stamp0 = int(p[0])
+        stamp1 = int(p[1])
+    except ValueError:
+        raise App400Error("bad mark format")
+
+    mark = ctx.base.lookup(stamp0, stamp1)
+    if mark == None:
+        raise App400Error("not found: "+str(stamp0)+"."+str(stamp1))
+    return mark
+
+def edit_form_new(output, ctx):
+    username = ctx.user['name']
+    userpath = ctx.prefix+'/'+username
+
+    left_lead = '  <h2 style="margin-bottom:0">'+\
+                '<a href="%s/">%s</a> / [%s]</h2>\n' % \
+                (userpath, username, WHITESTAR)
+    spit_lead(output, ctx, left_lead)
+
+    output.append('<form action="%s/edit" method=POST>' % userpath)
+    output.append('  title '+
+                  '<input name=title type=text size=100 maxlength=1023 /><br>')
+    output.append('  URL '+
+                  '<input name=href type=text size=100 maxlength=1023 /><br />')
+    output.append('  tags '+
+                  '<input name=tags type=text size=100 maxlength=1023 /><br />')
+    output.append('  extra '+
+                  '<input name=extra type=text size=100 maxlength=1023 /><br>')
+    output.append('  <input name=action type=submit value="OK" />\n')
+    output.append('</form>\n')
+
+def edit_form_mark(output, ctx, mark):
+    username = ctx.user['name']
+    userpath = ctx.prefix+'/'+username
+
+    left_lead = '  <h2 style="margin-bottom:0">'+\
+                '<a href="%s/">%s</a> / %s</h2>\n' % \
+                (userpath, username,
+                 mark_anchor_html(mark, userpath, WHITESTAR))
+    spit_lead(output, ctx, left_lead)
+
+    (stamp0, stamp1) = mark.key()
+    output.append('<form action="%s/mark.%d.%02d" method=POST>' %
+                   (userpath, stamp0, stamp1))
+
+    output.append('  title '+
+                  '<input name=title type=text size=100 maxlength=1023'+
+                  ' value="%s" /><br>' % mark.title)
+    output.append('  URL '+
+                  '<input name=href type=text size=100 maxlength=1023'+
+                  ' value="%s" /><br>' % mark.url)
+    tagstr = " ".join(mark.tags)
+    # tagstr = cgi.escape(tagstr, 1)
+    output.append('  tags '+
+                  '<input name=tags type=text size=100 maxlength=1023'+
+                  ' value="%s" /><br>' % tagstr)
+    output.append('  extra '+
+                  '<input name=extra type=text size=100 maxlength=1023'+
+                  ' value="%s" /><br>' % mark.note)
+    output.append('  <input name=action type=submit value="OK" />\n')
+    output.append('</form>\n')
+
+    ## Do we need a cancel? A link to old mark may be helpful....
+    # output.append('<form action="%s/mark.%d.%02d" method=GET>' %
+    #                (userpath, stamp0, stamp1))
+    # output.append('  <input name=action type=submit value="Cancel" />\n')
+    # output.append('</form>\n')
+
 def edit_form(start_response, ctx):
-    if ctx.query == None:
-        output = ["New\r\n"]
+    username = ctx.user['name']
+    userpath = ctx.prefix+'/'+username
+
+    mark = edit_findmark(ctx, ctx.query)
+
+    start_response("200 OK", [('Content-type', 'text/html')])
+    output = ["<html><body>\n"]
+    if mark == None:
+        edit_form_new(output, ctx)
     else:
-        output = ["%s\r\n" % ctx.query]
-    start_response("403 Not Permitted", [('Content-type', 'text/plain')])
-    output.append("Edit does not work yet\r\n")
+        edit_form_mark(output, ctx, mark)
+    output.append("<hr />\n")
+    output.append("</body></html>\n")
     return output
 
 def edit_post(start_response, ctx):
@@ -417,6 +506,10 @@ def app(start_response, ctx):
     if ctx.path == "login":
         return login(start_response, ctx)
     if ctx.path == "edit":
+        if ctx.flogin == 0:
+            start_response("403 Not Permitted",
+                           [('Content-type', 'text/plain')])
+            return ["403 Not Logged In\r\n"]
         return edit(start_response, ctx)
 
     if ctx.method != 'GET':

@@ -7,6 +7,8 @@
 
 class AppError(Exception):
     pass
+class App400Error(Exception):
+    pass
 class App404Error(Exception):
     pass
 class AppGetError(Exception):
