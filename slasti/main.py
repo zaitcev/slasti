@@ -305,22 +305,30 @@ def login_post(start_response, ctx):
     if len(password) < 1:
         raise App400Error("empty password")
 
+    # We do not require every user to have a password, in order to have
+    # archive users or other pseudo-users. They cannot login, even if they
+    # fake the login cookies.
+    if not ctx.user.has_key('salt'):
+        raise AppError("User with no salt: "+ctx.user['name'])
     if not ctx.user.has_key('pass'):
         raise AppError("User with no password: "+ctx.user['name'])
 
-    if password != ctx.user['pass']:
+    pwhash = hashlib.md5()
+    pwhash.update(ctx.user['salt']+password)
+    pwstr = pwhash.hexdigest()
+
+    # We operate on a hex of the salted password's digest, to avoid parsing.
+    if pwstr != ctx.user['pass']:
         start_response("403 Not Permitted", [('Content-type', 'text/plain')])
         return ["403 Not Permitted: Bad Password\r\n"]
 
-    # Salt just in case... Not sure if needed (if anyone would ever attack
-    # with precomputed values), but it costs us nothing.
     csalt = base64.b64encode(os.urandom(6))
     flags = "-"
     nowstr = "%d" % int(time.time())
     opdata = csalt+","+flags+","+nowstr
 
     coohash = hashlib.sha256()
-    coohash.update(password+opdata)
+    coohash.update(ctx.user['pass']+opdata)
     # We use hex instead of base64 because it's easy to test in shell.
     mdstr = coohash.hexdigest()
 

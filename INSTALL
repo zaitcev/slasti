@@ -1,0 +1,19 @@
+Slasti stores user passwords hashed at rest, and generates login cookies
+using the hash as if it were the plaintext. Obviously, anyone who captures
+the hash can fake login cookies, so there is no advantage for us to store
+passwords hashed. We only do it as a cortesy to people who use the same
+password on several websites.
+
+To configure user passwords, first select a salt. This works:
+
+ dd if=/dev/random bs=6 count=1 2>/dev/null | od -x | awk '{print $2 $3 $4}'
+
+You will save this as "salt" in slasti-users.conf. Then, negotiate the
+password with the user. Then, hash them together:
+
+ salt=$(dd if= blah blah blah)
+ password=whatever
+ echo -n "${salt}${password}" | md5sum
+
+The result of md5sum goes into the "pass" field. See the example
+slasti-users.conf for the JSON syntax.
