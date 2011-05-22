@@ -134,6 +134,8 @@ def page_mark_html(start_response, ctx, stamp0, stamp1):
     if mark == None:
         # We have to have at least one mark to display a page
         raise App404Error("Page not found: "+str(stamp0)+"."+str(stamp1))
+    if ctx.method != 'GET':
+        raise AppGetError(ctx.method)
     return page_any_html(start_response, ctx, mark)
 
 def page_tag_html(start_response, ctx, tag, stamp0, stamp1):
@@ -141,6 +143,8 @@ def page_tag_html(start_response, ctx, tag, stamp0, stamp1):
     if mark == None:
         raise App404Error("Tag page not found: "+tag+" / "+
                            str(stamp0)+"."+str(stamp1))
+    if ctx.method != 'GET':
+        raise AppGetError(ctx.method)
     return page_any_html(start_response, ctx, mark)
 
 def page_empty_html(start_response, ctx):
@@ -163,6 +167,10 @@ def one_mark_html(start_response, ctx, stamp0, stamp1):
     mark = ctx.base.lookup(stamp0, stamp1)
     if mark == None:
         raise App404Error("Mark not found: "+str(stamp0)+"."+str(stamp1))
+
+    # XXX implement post
+    if ctx.method != 'GET':
+        raise AppGetError(ctx.method)
 
     path = ctx.prefix+'/'+ctx.user['name']
 
@@ -200,6 +208,8 @@ def one_mark_html(start_response, ctx, stamp0, stamp1):
     return output
 
 def root_mark_html(start_response, ctx):
+    if ctx.method != 'GET':
+        raise AppGetError(ctx.method)
     mark = ctx.base.first()
     if mark == None:
         return page_empty_html(start_response, ctx)
@@ -232,10 +242,14 @@ def root_tag_html(start_response, ctx, tag):
     if mark == None:
         # Not sure if this may happen legitimately, so 404 for now.
         raise App404Error("Tag page not found: "+tag)
+    if ctx.method != 'GET':
+        raise AppGetError(ctx.method)
     return page_any_html(start_response, ctx, mark)
 
 # full_mark_html() would be a Netscape bookmarks file, perhaps.
 def full_mark_xml(start_response, user, base):
+    if ctx.method != 'GET':
+        raise AppGetError(ctx.method)
     response_headers = [('Content-type', 'text/xml')]
     start_response("200 OK", response_headers)
     output = []
@@ -251,6 +265,8 @@ def full_mark_xml(start_response, user, base):
     return output
 
 def full_tag_html(start_response, ctx):
+    if ctx.method != 'GET':
+        raise AppGetError(ctx.method)
     username = ctx.user['name']
     userpath = ctx.prefix+'/'+username
 
@@ -348,8 +364,7 @@ def login(start_response, ctx):
     if ctx.method == 'POST':
         return login_post(start_response, ctx)
     start_response("405 Method Not Allowed",
-                   [('Content-type', 'text/plain'),
-                    ('Allow', 'GET, POST')])
+                   [('Content-type', 'text/plain'), ('Allow', 'GET, POST')])
     return ["405 Method %s not allowed\r\n" % ctx.method]
 
 def login_verify(ctx):
@@ -438,24 +453,24 @@ def edit_form_mark(output, ctx, mark):
     spit_lead(output, ctx, left_lead)
 
     (stamp0, stamp1) = mark.key()
-    output.append('<form action="%s/mark.%d.%02d" method=POST>' %
+    output.append('<form action="%s/mark.%d.%02d" method=POST>\n' %
                    (userpath, stamp0, stamp1))
 
     output.append('  title '+
                   '<input name=title type=text size=100 maxlength=1023'+
-                  ' value="%s" /><br>' % mark.title)
+                  ' value="%s" /><br>\n' % mark.title)
     output.append('  URL '+
                   '<input name=href type=text size=100 maxlength=1023'+
-                  ' value="%s" /><br>' % mark.url)
+                  ' value="%s" /><br>\n' % mark.url)
     tagstr = " ".join(mark.tags)
     # tagstr = cgi.escape(tagstr, 1)
     output.append('  tags '+
                   '<input name=tags type=text size=100 maxlength=1023'+
-                  ' value="%s" /><br>' % tagstr)
+                  ' value="%s" /><br>\n' % tagstr)
     notestr = cgi.escape(mark.note, 1)
     output.append('  extra '+
                   '<input name=extra type=text size=100 maxlength=1023'+
-                  ' value="%s" /><br>' % notestr)
+                  ' value="%s" /><br>\n' % notestr)
     output.append('  <input name=action type=submit value="OK" />\n')
     output.append('</form>\n')
 
@@ -491,8 +506,7 @@ def edit(start_response, ctx):
     if ctx.method == 'POST':
         return edit_post(start_response, ctx)
     start_response("405 Method Not Allowed",
-                   [('Content-type', 'text/plain'),
-                    ('Allow', 'GET, POST')])
+                   [('Content-type', 'text/plain'), ('Allow', 'GET, POST')])
     return ["405 Method %s not allowed\r\n" % ctx.method]
 
 #
@@ -501,7 +515,7 @@ def edit(start_response, ctx):
 #   page.1296951840.00  -- page off this down
 #   mark.1296951840.00
 #   export.xml          -- del-compatible XML
-#   edit                -- PUT or POST here (XXX protect)
+#   edit                -- PUT or POST here, GET may have ?query
 #   login               -- GET or POST to obtain a cookie (not snoop-proof)
 #   anime/              -- tag (must have slash)
 #   anime/page.1293667202.11  -- tag page off this down
@@ -519,10 +533,6 @@ def app(start_response, ctx):
                            [('Content-type', 'text/plain')])
             return ["403 Not Logged In\r\n"]
         return edit(start_response, ctx)
-
-    if ctx.method != 'GET':
-        raise AppGetError(ctx.method)
-
     if ctx.path == "":
         return root_mark_html(start_response, ctx)
     if ctx.path == "export.xml":
