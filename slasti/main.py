@@ -13,7 +13,6 @@ import cgi
 import base64
 import os
 import hashlib
-import Cookie
 
 from slasti import AppError, App400Error, App404Error, AppGetError
 
@@ -453,9 +452,10 @@ def edit_form_mark(output, ctx, mark):
     output.append('  tags '+
                   '<input name=tags type=text size=100 maxlength=1023'+
                   ' value="%s" /><br>' % tagstr)
+    notestr = cgi.escape(mark.note, 1)
     output.append('  extra '+
                   '<input name=extra type=text size=100 maxlength=1023'+
-                  ' value="%s" /><br>' % mark.note)
+                  ' value="%s" /><br>' % notestr)
     output.append('  <input name=action type=submit value="OK" />\n')
     output.append('</form>\n')
 
