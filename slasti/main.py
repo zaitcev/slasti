@@ -14,7 +14,7 @@ import base64
 import os
 import hashlib
 
-from slasti import AppError, App400Error, App404Error, AppGetError
+from slasti import AppError, App400Error, App404Error, AppGetError, AppGetPostError
 
 PAGESZ = 25
 
@@ -163,15 +163,25 @@ def page_empty_html(start_response, ctx):
     output.append("</body></html>\n")
     return output
 
-def one_mark_html(start_response, ctx, stamp0, stamp1):
-    mark = ctx.base.lookup(stamp0, stamp1)
-    if mark == None:
-        raise App404Error("Mark not found: "+str(stamp0)+"."+str(stamp1))
+def mark_post(start_response, ctx, mark):
+    qdic = urlparse.parse_qs(ctx.pinput)
+    for arg in ['title', 'href', 'tags', 'extra']:
+        if not qdic.has_key(arg):
+            raise App400Error("no %s tag" % arg)
+        arglist = qdic[arg]
+        # if len(arglist) < 1:
+        #     raise App400Error("bad tag")
+        # arg0 = arglist[0]
+        # if len(arg0) < 1:
+        #     raise App400Error("empty password")
 
-    # XXX implement post
-    if ctx.method != 'GET':
-        raise AppGetError(ctx.method)
+    start_response("200 OK", [('Content-type', 'text/plain')])
+    output = []
+    output.append("posted:\r\n")
+    output.append(ctx.pinput)
+    return output
 
+def mark_get(start_response, ctx, mark, stamp0):
     path = ctx.prefix+'/'+ctx.user['name']
 
     start_response("200 OK", [('Content-type', 'text/html')])
@@ -206,6 +216,18 @@ def one_mark_html(start_response, ctx, stamp0, stamp1):
 
     output.append("</body></html>\n")
     return output
+
+def one_mark_html(start_response, ctx, stamp0, stamp1):
+    mark = ctx.base.lookup(stamp0, stamp1)
+    if mark == None:
+        raise App404Error("Mark not found: "+str(stamp0)+"."+str(stamp1))
+    if ctx.method == 'GET':
+        return mark_get(start_response, ctx, mark, stamp0)
+    if ctx.method == 'POST':
+        if ctx.flogin == 0:
+            raise AppLoginError()
+        return mark_post(start_response, ctx, mark)
+    raise AppGetPostError(ctx.method)
 
 def root_mark_html(start_response, ctx):
     if ctx.method != 'GET':
@@ -363,9 +385,7 @@ def login(start_response, ctx):
         return login_form(start_response, ctx)
     if ctx.method == 'POST':
         return login_post(start_response, ctx)
-    start_response("405 Method Not Allowed",
-                   [('Content-type', 'text/plain'), ('Allow', 'GET, POST')])
-    return ["405 Method %s not allowed\r\n" % ctx.method]
+    raise AppGetPostError(ctx.method)
 
 def login_verify(ctx):
     if not ctx.user.has_key('pass'):
@@ -505,9 +525,7 @@ def edit(start_response, ctx):
         return edit_form(start_response, ctx)
     if ctx.method == 'POST':
         return edit_post(start_response, ctx)
-    start_response("405 Method Not Allowed",
-                   [('Content-type', 'text/plain'), ('Allow', 'GET, POST')])
-    return ["405 Method %s not allowed\r\n" % ctx.method]
+    raise AppGetPostError(ctx.method)
 
 #
 # Request paths:
@@ -529,17 +547,13 @@ def app(start_response, ctx):
         return login(start_response, ctx)
     if ctx.path == "edit":
         if ctx.flogin == 0:
-            start_response("403 Not Permitted",
-                           [('Content-type', 'text/plain')])
-            return ["403 Not Logged In\r\n"]
+            raise AppLoginError()
         return edit(start_response, ctx)
     if ctx.path == "":
         return root_mark_html(start_response, ctx)
     if ctx.path == "export.xml":
         if ctx.flogin == 0:
-            start_response("403 Not Permitted",
-                           [('Content-type', 'text/plain')])
-            return ["403 Not Logged In\r\n"]
+            raise AppLoginError()
         return full_mark_xml(start_response, ctx.user, ctx.base)
     if ctx.path == "tags":
         return full_tag_html(start_response, ctx)

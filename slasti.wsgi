@@ -17,7 +17,7 @@ import Cookie
 # Replaced by  WSGIDaemonProcess slasti python-path=/usr/lib/slasti-mod
 # sys.path = sys.path + [ '/usr/lib/slasti-mod' ]
 import slasti
-from slasti import AppError, App400Error, App404Error, AppGetError
+from slasti import AppError, App404Error, AppGetError
 
 # The idea here is the same as with the file-backed tags database:
 # something simple to implement but with an API that presumes a higher
@@ -179,15 +179,22 @@ def application(environ, start_response):
     except AppError, e:
         start_response("500 Internal Error", [('Content-type', 'text/plain')])
         return [str(e), "\r\n"]
-    except App400Error, e:
+    except slasti.App400Error, e:
         start_response("400 Bad Request", [('Content-type', 'text/plain')])
         return ["400 Bad Request: %s\r\n" % str(e)]
+    except slasti.AppLoginError, e:
+        start_response("403 Not Permitted", [('Content-type', 'text/plain')])
+        return ["403 Not Logged In\r\n"]
     except App404Error, e:
         start_response("404 Not Found", [('Content-type', 'text/plain')])
         return [str(e), "\r\n"]
     except AppGetError, e:
         start_response("405 Method Not Allowed",
                        [('Content-type', 'text/plain'), ('Allow', 'GET')])
+        return ["405 Method %s not allowed\r\n" % str(e)]
+    except slasti.AppGetPostError, e:
+        start_response("405 Method Not Allowed",
+                       [('Content-type', 'text/plain'), ('Allow', 'GET, POST')])
         return ["405 Method %s not allowed\r\n" % str(e)]
 
 # We do not have __main__ in WSGI.

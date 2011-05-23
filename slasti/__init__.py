@@ -9,9 +9,13 @@ class AppError(Exception):
     pass
 class App400Error(Exception):
     pass
+class AppLoginError(Exception):
+    pass
 class App404Error(Exception):
     pass
 class AppGetError(Exception):
+    pass
+class AppGetPostError(Exception):
     pass
 
 class Context:
