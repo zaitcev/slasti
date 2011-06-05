@@ -81,6 +81,28 @@ def spit_lead(output, ctx, left_lead):
     output.append('</td>\n')
     output.append('</tr></table>\n')
 
+# qdic = urlparse.parse_qs(ctx.pinput)
+def fix_post_args(qdic):
+
+    # 'href' & 'tags' must be non-empty, other keys are optional
+    for arg in ['href', 'tags']:
+        if not qdic.has_key('href'):
+            raise App400Error("no tag %s" % arg)
+
+    argd = { }
+    for arg in ['title', 'href', 'tags', 'extra']:
+        # Empty actually ends here (browser may not send a key if empty).
+        if not qdic.has_key(arg):
+            argd[arg] = ""
+            continue
+        arglist = qdic[arg]
+        # This does not seem to happen even for empties, but be safe.
+        if len(arglist) < 1:
+            raise App400Error("bad tag %s" % arg)
+        argd[arg] = arglist[0]
+
+    return argd
+
 def page_any_html(start_response, ctx, mark_top):
     username = ctx.user['name']
     userpath = ctx.prefix+'/'+username
@@ -166,35 +188,17 @@ def page_empty_html(start_response, ctx):
     return output
 
 def mark_post(start_response, ctx, mark):
-    # XXX Somehow make it so that the mark is shown (even if 302 redirect)
     output = []
     output.append("posted...\r\n")
 
-    qdic = urlparse.parse_qs(ctx.pinput)
-
-    # 'href' & 'tags' must be non-empty, other keys are optional
-    for arg in ['href', 'tags']:
-        if not qdic.has_key('href'):
-            raise App400Error("no tag %s" % arg)
-
-    argd = { }
-    for arg in ['title', 'href', 'tags', 'extra']:
-        # Empty actually ends here (browser may not send a key if empty).
-        if not qdic.has_key(arg):
-            argd[arg] = ""
-            continue
-        arglist = qdic[arg]
-        # XXX Actually, is this impossible? I mean, a quasi-empty?
-        if len(arglist) < 1:
-            raise App400Error("bad tag %s" % arg)
-        argd[arg] = arglist[0]
+    argd = fix_post_args(urlparse.parse_qs(ctx.pinput))
 
     tags = tagbase.split_marks(argd['tags'])
-
     (stamp0, stamp1) = mark.key()
     ctx.base.edit1(stamp0, stamp1,
                    argd['title'], argd['href'], argd['extra'], tags)
 
+    # XXX Somehow make it so that the mark is shown (even if 302 redirect)
     start_response("200 OK", [('Content-type', 'text/plain')])
     return output
 
@@ -533,9 +537,23 @@ def edit_form(start_response, ctx):
     output.append("</body></html>\n")
     return output
 
+# The name edit_post() is a bit misleading, because POST to /edit is used
+# to create new marks, not to edit existing ones (see mark_post() for that).
 def edit_post(start_response, ctx):
-    start_response("403 Not Permitted", [('Content-type', 'text/plain')])
-    return ["Post mark does not work yet\r\n"]
+    output = []
+    output.append("posted...\r\n")
+
+    argd = fix_post_args(urlparse.parse_qs(ctx.pinput))
+    tags = tagbase.split_marks(argd['tags'])
+
+    stamp0 = int(time.time())
+    output.append("mark stamp: %d\r\n" % stamp0)
+    output.append("URL: "+argd['href']+"\r\n")
+    ctx.base.add1(stamp0, argd['title'], argd['href'], argd['extra'], tags)
+
+    # XXX Somehow make it so that the NEW mark is shown (even if 302 redirect)
+    start_response("200 OK", [('Content-type', 'text/plain')])
+    return output
 
 def edit(start_response, ctx):
     if ctx.method == 'GET':
