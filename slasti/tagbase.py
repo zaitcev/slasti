@@ -38,6 +38,78 @@ def load_tag(tagdir, tag):
         tagbuf = ''
     return tagbuf
 
+def read_tags(markdir, markname):
+    try:
+        f = open(markdir+"/"+markname, "r")
+    except IOError:
+        return []
+
+    # self-id: stamp1.stamp2
+    s = f.readline()
+    if s == None or len(s) == 0:
+        f.close()
+        return []
+
+    # title (???)
+    s = f.readline()
+    if s == None or len(s) == 0:
+        f.close()
+        return []
+
+    # url
+    s = f.readline()
+    if s == None or len(s) == 0:
+        f.close()
+        return []
+
+    # note
+    s = f.readline()
+    if s == None or len(s) == 0:
+        f.close()
+        return []
+
+    s = f.readline()
+    if s == None or len(s) == 0:
+        f.close()
+        return []
+    tags = split_marks(string.rstrip(s, "\r\n"))
+
+    f.close()
+    return tags
+
+# def difftags is not just what diff does, but a diff of two sorted lists.
+
+# We just throw it all into a colored list and let the result fall out.
+# The cleanest approach would be to merge reds and blues with the same key,
+# but we do not know a nice way to do it. So we join and then recolor.
+
+def difftags(old, new):
+
+    joint = []
+    for s in old:
+        joint.append([s,'-'])
+    for s in new:
+        joint.append([s,'+'])
+
+    joint.sort(None, lambda t: t[0])
+
+    prev = None
+    for s in joint:
+        if prev != None and prev[0] == s[0]:
+            prev[1] = ' ';
+            s[1] = ' ';
+        prev = s
+
+    minus = []
+    plus = []
+    for s in joint:
+        if s[1] == '-':
+            minus.append(s[0])
+        if s[1] == '+':
+            plus.append(s[0])
+
+    return (minus, plus)
+
 #
 # TagMark is one bookmark when we manipulate it (extracted from TagBase).
 #
@@ -301,23 +373,11 @@ class TagBase:
             return None
         return TagMark(self, tag, dlist, matchindex)
 
-    # The add1 constructs key from UNIX seconds.
-    def add1(self, timeint, title, url, note, tags):
+    #
+    # XXX Add locking for consistency of concurrent updates
 
-        # for normal website-entered content fix is usually zero
-        fix = 0
-        while 1:
-            stampkey = "%010d.%02d" % (timeint, fix)
-            markname = stampkey
-            # special-case full seconds to make directories a shade faster
-            if fix == 0:
-                markname = "%010d" % timeint
-            if not os.path.exists(self.markdir+"/"+markname):
-                break
-            fix += 1
-            if fix >= 100:
-                return
-
+    # Store the tag body
+    def store(self, markname, stampkey, title, url, note, tags):
         try:
             f = open(self.markdir+"/"+markname, "w+")
         except IOError, e:
@@ -345,6 +405,8 @@ class TagBase:
 
         f.close()
 
+    # Add tag links for a new mark (still, don't double-add)
+    def links_add(self, markname, tags):
         for t in tags:
             # 1. Read
             tagbuf = load_tag(self.tagdir, t)
@@ -361,6 +423,68 @@ class TagBase:
                 continue
             f.write(tagbuf)
             f.close()
+
+    # XXX Delete the tag file that has gone empty.
+    def links_del(self, markname, tags):
+        for t in tags:
+            # 1. Read
+            tagbuf = load_tag(self.tagdir, t)
+            # 2. Modify
+            mark_list = split_marks(tagbuf)
+            if not markname in mark_list:
+                continue
+            mark_list.remove(markname)
+            tagbuf = " ".join(mark_list)
+            # 3. Write
+            try:
+                f = open(self.tagdir+"/"+t, "w")
+            except IOError, e:
+                continue
+            f.write(tagbuf)
+            f.close()
+
+    def links_edit(self, markname, old_tags, new_tags):
+        tags_drop, tags_add = difftags(old_tags, new_tags)
+        # f = open("/tmp/slasti.run","w")
+        # print >>f, str(old_tags)
+        # print >>f, str(new_tags)
+        # print >>f, str(tags_drop)
+        # print >>f, str(tags_add)
+        # f.close()
+        self.links_del(markname, tags_drop)
+        self.links_add(markname, tags_add)
+
+    # The add1 constructs key from UNIX seconds.
+    def add1(self, timeint, title, url, note, tags):
+
+        # for normal website-entered content fix is usually zero
+        fix = 0
+        while 1:
+            stampkey = "%010d.%02d" % (timeint, fix)
+            # special-case full seconds to make directories a shade faster
+            if fix == 0:
+                markname = "%010d" % timeint
+            else:
+                markname = stampkey
+            if not os.path.exists(self.markdir+"/"+markname):
+                break
+            fix += 1
+            if fix >= 100:
+                return
+
+        self.store(markname, stampkey, title, url, note, tags)
+        self.links_add(markname, tags)
+
+    # Edit a presumably existing tag.
+    def edit1(self, timeint, fix, title, url, note, new_tags):
+        stampkey = "%010d.%02d" % (timeint, fix)
+        if fix == 0:
+            markname = "%010d" % timeint
+        else:
+            markname = stampkey
+        old_tags = read_tags(self.markdir, markname)
+        self.store(markname, stampkey, title, url, note, new_tags)
+        self.links_edit(markname, old_tags, new_tags)
 
     def __iter__(self):
         return TagMarkCursor(self)
