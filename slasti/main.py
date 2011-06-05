@@ -14,7 +14,8 @@ import base64
 import os
 import hashlib
 
-from slasti import AppError, App400Error, App404Error, AppGetError, AppGetPostError
+from slasti import AppError, App400Error, AppLoginError, App404Error
+from slasti import AppGetError, AppGetPostError
 import tagbase
 
 PAGESZ = 25
