@@ -286,7 +286,7 @@ def root_tag_html(start_response, ctx, tag):
     return page_any_html(start_response, ctx, mark)
 
 # full_mark_html() would be a Netscape bookmarks file, perhaps.
-def full_mark_xml(start_response, user, base):
+def full_mark_xml(start_response, ctx):
     if ctx.method != 'GET':
         raise AppGetError(ctx.method)
     response_headers = [('Content-type', 'text/xml')]
@@ -297,8 +297,8 @@ def full_mark_xml(start_response, user, base):
     # We omit total. Also, we noticed that Del.icio.us often miscalculates
     # the total, so obviously it's not used by any applications.
     # We omit the last update as well. Our data base does not keep it.
-    output.append('<posts user="'+user['name']+'" tag="">\n')
-    for mark in base:
+    output.append('<posts user="'+ctx.user['name']+'" tag="">\n')
+    for mark in ctx.base:
         output.append(mark.xml())
     output.append("</posts>\n")
     return output
@@ -571,7 +571,7 @@ def app(start_response, ctx):
     if ctx.path == "export.xml":
         if ctx.flogin == 0:
             raise AppLoginError()
-        return full_mark_xml(start_response, ctx.user, ctx.base)
+        return full_mark_xml(start_response, ctx)
     if ctx.path == "tags":
         return full_tag_html(start_response, ctx)
     if "/" in ctx.path:
