@@ -84,27 +84,27 @@ def do_root(environ, start_response):
             "(https://github.com/zaitcev/slasti)\r\n"]
 
 ## Based on James Gardner's environ dump.
-def do_environ(environ, start_response):
-    method = environ['REQUEST_METHOD']
-    if method != 'GET':
-        raise AppGetError(method)
-
-    sorted_keys = environ.keys()
-    sorted_keys.sort()
-
-    response_headers = [('Content-type', 'text/html')]
-    start_response("200 OK", response_headers)
-    output = ["<html><body><h1><kbd>environ</kbd></h1><p>"]
-
-    for kval in sorted_keys:
-        output.append("<br />")
-        output.append(kval)
-        output.append("=")
-        output.append(str(environ[kval]))
-
-    output.append("</p></body></html>")
-
-    return output
+#def do_environ(environ, start_response):
+#    method = environ['REQUEST_METHOD']
+#    if method != 'GET':
+#        raise AppGetError(method)
+#
+#    sorted_keys = environ.keys()
+#    sorted_keys.sort()
+#
+#    response_headers = [('Content-type', 'text/html')]
+#    start_response("200 OK", response_headers)
+#    output = ["<html><body><h1><kbd>environ</kbd></h1><p>"]
+#
+#    for kval in sorted_keys:
+#        output.append("<br />")
+#        output.append(kval)
+#        output.append("=")
+#        output.append(str(environ[kval]))
+#
+#    output.append("</p></body></html>")
+#
+#    return output
 
 def do_user(environ, start_response, path):
     # We will stop reloading UserBase on every call once we figure out how.
@@ -172,8 +172,8 @@ def application(environ, start_response):
         path = environ['PATH_INFO']
         if path == None or path == "" or path == "/":
             return do_root(environ, start_response)
-        elif path == "/environ":
-            return do_environ(environ, start_response)
+        #elif path == "/environ":
+        #    return do_environ(environ, start_response)
         else:
             return do_user(environ, start_response, path)
     except AppError, e:
