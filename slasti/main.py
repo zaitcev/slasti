@@ -64,20 +64,25 @@ def tag_anchor_html(tag, path):
     return ' <a href="%s/%s/">%s</a>' % (path, tagu, tagt)
 
 def spit_lead(output, ctx, left_lead):
-    path = ctx.prefix+'/'+ctx.user['name']
+    username = ctx.user['name']
+    userpath = ctx.prefix+'/'+username
 
     output.append('<table width="100%" style="background: #ebf7eb" ' +
                   'border=0 cellpadding=1 cellspacing=0><tr valign="top">\n')
     output.append('<td align="left">%s</td>\n' % left_lead)
     output.append('<td align="right">')
     if ctx.flogin == 0:
-        output.append(' [<a href="%s/login">login</a>]' % path)
-    output.append(' [<b><a href="%s/tags">tags</a></b>]' % path)
-    output.append(' [<a href="%s/edit">new</a>]' % path)
+        if ctx.path == "" or ctx.path == "login" or ctx.path == "edit":
+            output.append(' [<a href="%s/login">login</a>]' % userpath)
+        else:
+            output.append(' [<a href="%s/login?savedref=%s">login</a>]' %
+                          (userpath, ctx.path))
+    output.append(' [<b><a href="%s/tags">tags</a></b>]' % userpath)
+    output.append(' [<a href="%s/edit">new</a>]' % userpath)
     if ctx.flogin == 0:
         output.append(' [e]')
     else:
-        output.append(' [<a href="%s/export.xml">e</a>]' % path)
+        output.append(' [<a href="%s/export.xml">e</a>]' % userpath)
     output.append('</td>\n')
     output.append('</tr></table>\n')
 
@@ -333,27 +338,53 @@ def full_tag_html(start_response, ctx):
     output.append("</body></html>\n")
     return output
 
+def login_findref(qdic):
+    if not qdic.has_key('savedref'):
+        return None
+    qlist = qdic['savedref']
+    if len(qlist) < 1:
+        return None
+    return qlist[0]
+
 def login_form(start_response, ctx):
     username = ctx.user['name']
     userpath = ctx.prefix+'/'+username
 
+    if ctx.query == None:
+        savedref = None
+    else:
+        qdic = urlparse.parse_qs(ctx.query)
+        savedref = login_findref(qdic)
+
     start_response("200 OK", [('Content-type', 'text/html')])
 
     output = ["<html><body>\n"]
-    output.append('<form action="%s/login" method=POST>' % userpath)
+    output.append('<form action="%s/login" method=POST>\n' % userpath)
     output.append(
-        '  %s: <input name=password type=password size=32 maxlength=32 />' %
+        '  %s: <input name=password type=password size=32 maxlength=32 />\n' %
         username)
     output.append('  <input name=OK type=submit value="Enter" />\n')
+    if savedref:
+        output.append('  <input name=savedref type=hidden value="%s" />\n' %
+                      savedref)
     output.append('</form>\n')
     output.append("</body></html>\n")
     return output
 
 def login_post(start_response, ctx):
+    username = ctx.user['name']
+    userpath = ctx.prefix+'/'+username
 
     # XXX verify encoding application/x-www-form-urlencoded
     # pinput = "password=test&OK=Enter" and possibly a newline
     qdic = urlparse.parse_qs(ctx.pinput)
+
+    savedref = login_findref(qdic)
+    if savedref:
+        redihref = "%s/%s" % (userpath, savedref)
+    else:
+        redihref = "%s/" % userpath;
+
     if not qdic.has_key('password'):
         raise App400Error("no password tag")
     plist = qdic['password']
@@ -367,9 +398,9 @@ def login_post(start_response, ctx):
     # archive users or other pseudo-users. They cannot login, even if they
     # fake the login cookies.
     if not ctx.user.has_key('salt'):
-        raise AppError("User with no salt: "+ctx.user['name'])
+        raise AppError("User with no salt: "+username)
     if not ctx.user.has_key('pass'):
-        raise AppError("User with no password: "+ctx.user['name'])
+        raise AppError("User with no password: "+username)
 
     pwhash = hashlib.md5()
     pwhash.update(ctx.user['salt']+password)
@@ -393,12 +424,12 @@ def login_post(start_response, ctx):
     response_headers = [('Content-type', 'text/html')]
     # Set an RFC 2901 cookie (not RFC 2965).
     response_headers.append(('Set-Cookie', "login=%s:%s" % (opdata, mdstr)))
-    start_response("200 OK", response_headers)
+    response_headers.append(('Location', redihref))
+    start_response("303 See Other", response_headers)
 
-    # XXX Replace with going the previous URL or root.
-    output = ["<html><body>\n"]
-    output.append("<p>OK</p>\n")
-    output.append("</body></html>\n")
+    output = ['<html><body>\n']
+    output.append('<p><a href="%s">See Other</a></p>\n' % redihref)
+    output.append('</body></html>\n')
     return output
 
 def login(start_response, ctx):
