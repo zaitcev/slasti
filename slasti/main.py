@@ -104,7 +104,8 @@ def fix_post_args(qdic):
         # This does not seem to happen even for empties, but be safe.
         if len(arglist) < 1:
             raise App400Error("bad tag %s" % arg)
-        argd[arg] = arglist[0]
+        # Convert into Unicode, else tagbase.store() blows up when writing.
+        argd[arg] = arglist[0].decode("utf-8", 'replace')
 
     return argd
 
