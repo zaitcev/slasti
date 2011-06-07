@@ -194,9 +194,6 @@ def page_empty_html(start_response, ctx):
     return output
 
 def mark_post(start_response, ctx, mark):
-    output = []
-    output.append("posted...\r\n")
-
     argd = fix_post_args(urlparse.parse_qs(ctx.pinput))
 
     tags = tagbase.split_marks(argd['tags'])
@@ -204,9 +201,12 @@ def mark_post(start_response, ctx, mark):
     ctx.base.edit1(stamp0, stamp1,
                    argd['title'], argd['href'], argd['extra'], tags)
 
-    # XXX Somehow make it so that the mark is shown (even if 302 redirect)
-    start_response("200 OK", [('Content-type', 'text/plain')])
-    return output
+    # Since the URL stays the same, we eschew 303 here.
+    # Just re-read the base entry with a lookup and pretend this was a GET.
+    mark = ctx.base.lookup(stamp0, stamp1)
+    if mark == None:
+        raise App404Error("Mark not found: "+str(stamp0)+"."+str(stamp1))
+    return mark_get(start_response, ctx, mark, stamp0)
 
 def mark_get(start_response, ctx, mark, stamp0):
     path = ctx.prefix+'/'+ctx.user['name']
@@ -572,19 +572,27 @@ def edit_form(start_response, ctx):
 # The name edit_post() is a bit misleading, because POST to /edit is used
 # to create new marks, not to edit existing ones (see mark_post() for that).
 def edit_post(start_response, ctx):
-    output = []
-    output.append("posted...\r\n")
+    username = ctx.user['name']
+    userpath = ctx.prefix+'/'+username
 
     argd = fix_post_args(urlparse.parse_qs(ctx.pinput))
     tags = tagbase.split_marks(argd['tags'])
 
     stamp0 = int(time.time())
-    output.append("mark stamp: %d\r\n" % stamp0)
-    output.append("URL: "+argd['href']+"\r\n")
-    ctx.base.add1(stamp0, argd['title'], argd['href'], argd['extra'], tags)
+    stamp1 = ctx.base.add1(stamp0,
+                           argd['title'], argd['href'], argd['extra'], tags)
+    if stamp1 < 0:
+        raise App404Error("Out of fix: %d" % stamp0)
 
-    # XXX Somehow make it so that the NEW mark is shown (even if 302 redirect)
-    start_response("200 OK", [('Content-type', 'text/plain')])
+    redihref = '%s/mark.%d.%02d' % (userpath, stamp0, stamp1)
+
+    response_headers = [('Content-type', 'text/html')]
+    response_headers.append(('Location', redihref))
+    start_response("303 See Other", response_headers)
+
+    output = ['<html><body>\n']
+    output.append('<p><a href="%s">See Other</a></p>\n' % redihref)
+    output.append('</body></html>\n')
     return output
 
 def edit(start_response, ctx):

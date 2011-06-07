@@ -470,10 +470,11 @@ class TagBase:
                 break
             fix += 1
             if fix >= 100:
-                return
+                return -1
 
         self.store(markname, stampkey, title, url, note, tags)
         self.links_add(markname, tags)
+        return fix
 
     # Edit a presumably existing tag.
     def edit1(self, timeint, fix, title, url, note, new_tags):
