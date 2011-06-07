@@ -9,7 +9,7 @@
 #
 import string
 import codecs
-(utf8_encode, utf8_decode, utf8_reader, utf8_writer) = codecs.lookup("utf-8")
+utf8_writer = codecs.getwriter("utf-8")
 import os
 import errno
 import time
