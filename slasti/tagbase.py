@@ -424,7 +424,6 @@ class TagBase:
             f.write(tagbuf)
             f.close()
 
-    # XXX Delete the tag file that has gone empty.
     def links_del(self, markname, tags):
         for t in tags:
             # 1. Read
@@ -434,14 +433,17 @@ class TagBase:
             if not markname in mark_list:
                 continue
             mark_list.remove(markname)
-            tagbuf = " ".join(mark_list)
             # 3. Write
-            try:
-                f = open(self.tagdir+"/"+t, "w")
-            except IOError, e:
-                continue
-            f.write(tagbuf)
-            f.close()
+            if len(mark_list) != 0:
+                tagbuf = " ".join(mark_list)
+                try:
+                    f = open(self.tagdir+"/"+t, "w")
+                except IOError, e:
+                    continue
+                f.write(tagbuf)
+                f.close()
+            else:
+                os.remove(self.tagdir+"/"+t)
 
     def links_edit(self, markname, old_tags, new_tags):
         tags_drop, tags_add = difftags(old_tags, new_tags)
