@@ -73,12 +73,6 @@ class UserBase:
     #def __del__(self):
     #    pass
 
-def deunicode(uniput):
-    output = []
-    for s in uniput:
-        output.append(slasti.safestr(s))
-    return output
-
 def do_root(environ, start_response):
     method = environ['REQUEST_METHOD']
     if method != 'GET':
@@ -191,8 +185,13 @@ def application(environ, start_response):
         #    return do_environ(environ, start_response)
         else:
             output = do_user(environ, start_response, path)
+
         # The framework blows up if a unicode string leaks into output list.
-        return deunicode(output)
+        safeout = []
+        for s in output:
+            safeout.append(slasti.safestr(s))
+        return safeout
+
     except AppError, e:
         start_response("500 Internal Error", [('Content-type', 'text/plain')])
         return [str(e), "\r\n"]
