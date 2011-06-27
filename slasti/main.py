@@ -302,7 +302,7 @@ def full_mark_xml(start_response, ctx):
     response_headers = [('Content-type', 'text/xml')]
     start_response("200 OK", response_headers)
     output = []
-    output.append('<?xml version="1.0" encoding="UTF-8"?>')
+    output.append('<?xml version="1.0" encoding="UTF-8"?>\n')
     # <posts user="zaitcev" update="2010-12-16T20:17:55Z" tag="" total="860">
     # We omit total. Also, we noticed that Del.icio.us often miscalculates
     # the total, so obviously it's not used by any applications.
