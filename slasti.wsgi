@@ -168,14 +168,30 @@ def application(environ, start_response):
     # import os, pwd
     # os.environ["HOME"] = pwd.getpwuid(os.getuid()).pw_dir
 
+    path = environ['PATH_INFO']
+    if isinstance(path, basestring):
+        if not isinstance(path, unicode):
+            try:
+                path = unicode(path, 'utf-8')
+            except UnicodeDecodeError:
+                start_response("400 Bad Request",
+                               [('Content-type', 'text/plain')])
+                return ["400 Unable to decode UTF-8 in path\r\n"]
+
     try:
-        path = environ['PATH_INFO']
         if path == None or path == "" or path == "/":
-            return do_root(environ, start_response)
+            output = do_root(environ, start_response)
         #elif path == "/environ":
         #    return do_environ(environ, start_response)
         else:
-            return do_user(environ, start_response, path)
+            output = do_user(environ, start_response, path)
+
+        # The framework blows up if a unicode string leaks into output list.
+        safeout = []
+        for s in output:
+            safeout.append(slasti.safestr(s))
+        return safeout
+
     except AppError, e:
         start_response("500 Internal Error", [('Content-type', 'text/plain')])
         return [str(e), "\r\n"]
