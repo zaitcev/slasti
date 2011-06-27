@@ -16,6 +16,7 @@ import hashlib
 
 from slasti import AppError, App400Error, AppLoginError, App404Error
 from slasti import AppGetError, AppGetPostError
+import slasti
 import tagbase
 
 PAGESZ = 25
@@ -60,7 +61,7 @@ def tag_anchor_html(tag, path):
     if tag == None:
         return ' -'
     tagu = urllib.quote_plus(tag)
-    tagt = cgi.escape(tag)
+    tagt = unicode(cgi.escape(slasti.safestr(tag)),'utf-8')
     return ' <a href="%s/%s/">%s</a>' % (path, tagu, tagt)
 
 def spit_lead(output, ctx, left_lead):
@@ -302,7 +303,7 @@ def full_mark_xml(start_response, ctx):
     response_headers = [('Content-type', 'text/xml')]
     start_response("200 OK", response_headers)
     output = []
-    output.append('<?xml version="1.0" encoding="UTF-8"?>')
+    output.append('<?xml version="1.0" encoding="UTF-8"?>\n')
     # <posts user="zaitcev" update="2010-12-16T20:17:55Z" tag="" total="860">
     # We omit total. Also, we noticed that Del.icio.us often miscalculates
     # the total, so obviously it's not used by any applications.
@@ -425,7 +426,7 @@ def login_post(start_response, ctx):
     response_headers = [('Content-type', 'text/html')]
     # Set an RFC 2901 cookie (not RFC 2965).
     response_headers.append(('Set-Cookie', "login=%s:%s" % (opdata, mdstr)))
-    response_headers.append(('Location', redihref))
+    response_headers.append(('Location', slasti.safestr(redihref)))
     start_response("303 See Other", response_headers)
 
     output = ['<html><body>\n']
@@ -540,6 +541,7 @@ def edit_form_mark(output, ctx, mark):
     output.append('  tags '+
                   '<input name=tags type=text size=100 maxlength=1023'+
                   ' value="%s" /><br>\n' % tagstr)
+    # notestr = cgi.escape(slasti.safestr(mark.note), 1)
     notestr = cgi.escape(mark.note, 1)
     output.append('  extra '+
                   '<input name=extra type=text size=100 maxlength=1023'+
@@ -587,7 +589,7 @@ def edit_post(start_response, ctx):
     redihref = '%s/mark.%d.%02d' % (userpath, stamp0, stamp1)
 
     response_headers = [('Content-type', 'text/html')]
-    response_headers.append(('Location', redihref))
+    response_headers.append(('Location', slasti.safestr(redihref)))
     start_response("303 See Other", response_headers)
 
     output = ['<html><body>\n']

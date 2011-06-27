@@ -15,8 +15,41 @@ import errno
 import time
 # import urllib
 import cgi
+import base64
 
 from slasti import AppError
+import slasti
+
+# A WSGI module running on Fedora 15 gets no LANG, so Python decides
+# that filesystem encoding is "ascii". This cannot be changed.
+# Then, an attempt to call open(basedir+"/"+tag) blows up with
+# "UnicodeDecodeError: 'ascii' codec can't decode byte 0xe3 in posi...".
+# Manual encoding does not work, it still blows up even if argument is str.
+# The only way is to avoid UTF-8 filenames entirely.
+
+def fs_encode(tag):
+    return base64.b64encode(slasti.safestr(tag), "+_")
+
+def fs_decode(tag):
+    # XXX try TypeError -- and then what?
+    s = base64.b64decode(tag, "+_")
+    # XXX try UnicodeDecodeError -- and then what?
+    u = s.decode('utf-8')
+    return u
+
+def fs_decode_list(names):
+    ret = []
+    for s in names:
+        # Encoding with ascii? Why, yes. In F15, listdir returns unicode
+        # strings, but b64decode blows up on them (deep in .translate()
+        # not having the right table). Force back into str. They are base64
+        # encoded, so 'ascii' is appropriate.
+        if isinstance(s, unicode):
+            s = s.encode('ascii')
+        ret.append(fs_decode(s))
+    return ret
+
+#
 
 def split_marks(tagstr):
     tags = []
@@ -27,7 +60,7 @@ def split_marks(tagstr):
 
 def load_tag(tagdir, tag):
     try:
-        f = open(tagdir+"/"+tag, "r")
+        f = open(tagdir+"/"+fs_encode(tag), "r")
     except IOError, e:
         f = None
     if f != None:
@@ -85,28 +118,32 @@ def read_tags(markdir, markname):
 
 def difftags(old, new):
 
+    # No amount of tinkering with strxfrm, strcoll, and locale settings helps.
+    # The sort still blows up with UnicodeDecodeError, codec 'ascii'.
+    # So, just safestr the sort keys.
+
     joint = []
     for s in old:
-        joint.append([s,'-'])
+        joint.append([slasti.safestr(s),s,'-'])
     for s in new:
-        joint.append([s,'+'])
+        joint.append([slasti.safestr(s),s,'+'])
 
     joint.sort(None, lambda t: t[0])
 
     prev = None
     for s in joint:
         if prev != None and prev[0] == s[0]:
-            prev[1] = ' ';
-            s[1] = ' ';
+            prev[2] = ' ';
+            s[2] = ' ';
         prev = s
 
     minus = []
     plus = []
     for s in joint:
-        if s[1] == '-':
-            minus.append(s[0])
-        if s[1] == '+':
-            plus.append(s[0])
+        if s[2] == '-':
+            minus.append(s[1])
+        if s[2] == '+':
+            plus.append(s[1])
 
     return (minus, plus)
 
@@ -305,7 +342,7 @@ class TagTag:
 class TagTagCursor:
     def __init__(self, base):
         self.base = base
-        self.dlist = os.listdir(base.tagdir)
+        self.dlist = fs_decode_list(os.listdir(base.tagdir))
         self.dlist.sort()
         self.index = 0
         self.length = len(self.dlist)
@@ -418,7 +455,7 @@ class TagBase:
             tagbuf = tagbuf+" "+markname
             # 3. Write
             try:
-                f = open(self.tagdir+"/"+t, "w")
+                f = open(self.tagdir+"/"+fs_encode(t), "w")
             except IOError, e:
                 continue
             f.write(tagbuf)
@@ -437,13 +474,13 @@ class TagBase:
             if len(mark_list) != 0:
                 tagbuf = " ".join(mark_list)
                 try:
-                    f = open(self.tagdir+"/"+t, "w")
+                    f = open(self.tagdir+"/"+fs_encode(t), "w")
                 except IOError, e:
                     continue
                 f.write(tagbuf)
                 f.close()
             else:
-                os.remove(self.tagdir+"/"+t)
+                os.remove(self.tagdir+"/"+fs_encode(t))
 
     def links_edit(self, markname, old_tags, new_tags):
         tags_drop, tags_add = difftags(old_tags, new_tags)

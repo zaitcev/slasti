@@ -18,6 +18,11 @@ class AppGetError(Exception):
 class AppGetPostError(Exception):
     pass
 
+def safestr(u):
+    if isinstance(u, unicode):
+        return u.encode('utf-8')
+    return u
+
 class Context:
     def __init__(self, pfx, user, base, method, path, query, pinput, coos):
         # prefix: Path where the application is mounted in WSGI or empty string.
