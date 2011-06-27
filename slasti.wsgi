@@ -123,6 +123,13 @@ def do_user(environ, start_response, path):
     method = environ['REQUEST_METHOD']
     if method == 'POST':
         pinput = environ['wsgi.input'].readline()
+        if not isinstance(pinput, unicode):
+            try:
+                pinput = unicode(pinput, 'utf-8')
+            except UnicodeDecodeError:
+                start_response("400 Bad Request",
+                               [('Content-type', 'text/plain')])
+                return ["400 Unable to decode UTF-8 in POST\r\n"]
     else:
         pinput = None
 
