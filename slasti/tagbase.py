@@ -225,7 +225,8 @@ class TagMark:
         # There do not seem to be any exceptions raised with weird inputs.
         datestr = time.strftime("%Y-%m-%d", time.gmtime(self.stamp0))
         return self.ourlist[self.ourindex]+'|'+datestr+'|'+\
-               self.title+'|'+self.url+'|'+self.note+"|"+str(self.tags)
+               self.title+'|'+self.url+'|'+self.note+"|"+\
+               slasti.safestr(unicode(self.tags))
 
     def key(self):
         return (self.stamp0, self.stamp1)
