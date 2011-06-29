@@ -389,12 +389,12 @@ def login_post(start_response, ctx):
     username = ctx.user['name']
     userpath = ctx.prefix+'/'+username
 
-    # XXX verify encoding application/x-www-form-urlencoded
     # pinput = "password=test&OK=Enter" and possibly a newline
     qdic = urlparse.parse_qs(ctx.pinput)
 
     savedref = login_findref(qdic)
     if savedref:
+        savedref = savedref.decode("utf-8", 'replace')
         redihref = "%s/%s" % (userpath, savedref)
     else:
         redihref = "%s/" % userpath;
