@@ -123,7 +123,10 @@ def page_any_html(start_response, ctx, mark_top):
         what = what+'/'
 
     start_response("200 OK", [('Content-type', 'text/html')])
-    output = ["<html><body>\n"]
+    output = ['<html>\n']
+    output.append('<head><meta http-equiv="Content-Type"'+
+                  ' content="text/html; charset=UTF-8"></head>\n')
+    output.append('<body>\n')
 
     left_lead = '  <h2 style="margin-bottom:0">'+\
                 '<a href="%s/">%s</a> / %s</h2>\n' % \
@@ -213,7 +216,10 @@ def mark_get(start_response, ctx, mark, stamp0):
     path = ctx.prefix+'/'+ctx.user['name']
 
     start_response("200 OK", [('Content-type', 'text/html')])
-    output = ["<html><body>\n"]
+    output = ['<html>\n']
+    output.append('<head><meta http-equiv="Content-Type"'+
+                  ' content="text/html; charset=UTF-8"></head>\n')
+    output.append('<body>\n')
 
     left_lead = '  <h2 style="margin-bottom:0">'+\
                 '<a href="%s/">%s</a></h2>\n' % \
@@ -321,7 +327,10 @@ def full_tag_html(start_response, ctx):
     userpath = ctx.prefix+'/'+username
 
     start_response("200 OK", [('Content-type', 'text/html')])
-    output = ["<html><body>\n"]
+    output = ['<html>\n']
+    output.append('<head><meta http-equiv="Content-Type"'+
+                  ' content="text/html; charset=UTF-8"></head>\n')
+    output.append('<body>\n')
 
     left_lead = '  <h2 style="margin-bottom:0">'+\
                 '<a href="%s/">%s</a> / tags</h2>\n' % \
@@ -360,7 +369,10 @@ def login_form(start_response, ctx):
 
     start_response("200 OK", [('Content-type', 'text/html')])
 
-    output = ["<html><body>\n"]
+    output = ['<html>\n']
+    output.append('<head><meta http-equiv="Content-Type"'+
+                  ' content="text/html; charset=UTF-8"></head>\n')
+    output.append('<body>\n')
     output.append('<form action="%s/login" method=POST>\n' % userpath)
     output.append(
         '  %s: <input name=password type=password size=32 maxlength=32 />\n' %
@@ -377,12 +389,12 @@ def login_post(start_response, ctx):
     username = ctx.user['name']
     userpath = ctx.prefix+'/'+username
 
-    # XXX verify encoding application/x-www-form-urlencoded
     # pinput = "password=test&OK=Enter" and possibly a newline
     qdic = urlparse.parse_qs(ctx.pinput)
 
     savedref = login_findref(qdic)
     if savedref:
+        savedref = savedref.decode("utf-8", 'replace')
         redihref = "%s/%s" % (userpath, savedref)
     else:
         redihref = "%s/" % userpath;
@@ -429,7 +441,10 @@ def login_post(start_response, ctx):
     response_headers.append(('Location', slasti.safestr(redihref)))
     start_response("303 See Other", response_headers)
 
-    output = ['<html><body>\n']
+    output = ['<html>\n']
+    output.append('<head><meta http-equiv="Content-Type"'+
+                  ' content="text/html; charset=UTF-8"></head>\n')
+    output.append('<body>\n')
     output.append('<p><a href="%s">See Other</a></p>\n' % redihref)
     output.append('</body></html>\n')
     return output
@@ -562,7 +577,10 @@ def edit_form(start_response, ctx):
     mark = edit_findmark(ctx, ctx.query)
 
     start_response("200 OK", [('Content-type', 'text/html')])
-    output = ["<html><body>\n"]
+    output = ['<html>\n']
+    output.append('<head><meta http-equiv="Content-Type"'+
+                  ' content="text/html; charset=UTF-8"></head>\n')
+    output.append('<body>\n')
     if mark == None:
         edit_form_new(output, ctx)
     else:
@@ -592,7 +610,10 @@ def edit_post(start_response, ctx):
     response_headers.append(('Location', slasti.safestr(redihref)))
     start_response("303 See Other", response_headers)
 
-    output = ['<html><body>\n']
+    output = ['<html>\n']
+    output.append('<head><meta http-equiv="Content-Type"'+
+                  ' content="text/html; charset=UTF-8"></head>\n')
+    output.append('<body>\n')
     output.append('<p><a href="%s">See Other</a></p>\n' % redihref)
     output.append('</body></html>\n')
     return output

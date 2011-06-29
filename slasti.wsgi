@@ -123,13 +123,18 @@ def do_user(environ, start_response, path):
     method = environ['REQUEST_METHOD']
     if method == 'POST':
         pinput = environ['wsgi.input'].readline()
-        if not isinstance(pinput, unicode):
-            try:
-                pinput = unicode(pinput, 'utf-8')
-            except UnicodeDecodeError:
-                start_response("400 Bad Request",
-                               [('Content-type', 'text/plain')])
-                return ["400 Unable to decode UTF-8 in POST\r\n"]
+        # Every Unicode-in-Python preso on the Internet says to decode on the
+        # border. However, this is actually disastrous, because it's pinput
+        # may actually be uuencoded. It we decode it here, parse_qs returns
+        # a dictionary of unicode strings, which actually contain split-up
+        # UTF-8 bytes, and then we're dead in the water. So, don't do this.
+        #if not isinstance(pinput, unicode):
+        #    try:
+        #        pinput = unicode(pinput, 'utf-8')
+        #    except UnicodeDecodeError:
+        #        start_response("400 Bad Request",
+        #                       [('Content-type', 'text/plain')])
+        #        return ["400 Unable to decode UTF-8 in POST\r\n"]
     else:
         pinput = None
 
@@ -157,7 +162,7 @@ def do_user(environ, start_response, path):
         c.load(environ['HTTP_COOKIE'])
     except Cookie.CookieError, e:
         start_response("400 Bad Request", [('Content-type', 'text/plain')])
-        return ["400 Bad Cookie: "+str(e)+"\r\n"]
+        return ["400 Bad Cookie: "+slasti.safestr(unicode(e))+"\r\n"]
     except KeyError:
         c = None
 
@@ -201,24 +206,24 @@ def application(environ, start_response):
 
     except AppError, e:
         start_response("500 Internal Error", [('Content-type', 'text/plain')])
-        return [str(e), "\r\n"]
+        return [slast.safestr(unicode(e)), "\r\n"]
     except slasti.App400Error, e:
         start_response("400 Bad Request", [('Content-type', 'text/plain')])
-        return ["400 Bad Request: %s\r\n" % str(e)]
+        return ["400 Bad Request: %s\r\n" % slasti.safestr(unicode(e))]
     except slasti.AppLoginError, e:
         start_response("403 Not Permitted", [('Content-type', 'text/plain')])
         return ["403 Not Logged In\r\n"]
     except App404Error, e:
         start_response("404 Not Found", [('Content-type', 'text/plain')])
-        return [str(e), "\r\n"]
+        return [slasti.safestr(unicode(e)), "\r\n"]
     except AppGetError, e:
         start_response("405 Method Not Allowed",
                        [('Content-type', 'text/plain'), ('Allow', 'GET')])
-        return ["405 Method %s not allowed\r\n" % str(e)]
+        return ["405 Method %s not allowed\r\n" % slasti.safestr(unicode(e))]
     except slasti.AppGetPostError, e:
         start_response("405 Method Not Allowed",
                        [('Content-type', 'text/plain'), ('Allow', 'GET, POST')])
-        return ["405 Method %s not allowed\r\n" % str(e)]
+        return ["405 Method %s not allowed\r\n" % slasti.safestr(unicode(e))]
 
 # We do not have __main__ in WSGI.
 # if __name__.startswith('_mod_wsgi_'):
