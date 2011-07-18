@@ -1,3 +1,11 @@
+= requirements
+
+Slasti works through WSGI interface to a webserver, so it needs mod_wsgi.
+See INSTALL.mod_wsgi for specifics. It also needs Python 2.6 or thereabout.
+No database is used.
+
+= passwords
+
 Slasti stores user passwords hashed at rest, and generates login cookies
 using the hash as if it were the plaintext. Obviously, anyone who captures
 the hash can fake login cookies, so there is no advantage for us to store
