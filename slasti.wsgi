@@ -124,10 +124,10 @@ def do_user(environ, start_response, path):
     if method == 'POST':
         pinput = environ['wsgi.input'].readline()
         # Every Unicode-in-Python preso on the Internet says to decode on the
-        # border. However, this is actually disastrous, because it's pinput
-        # may actually be uuencoded. It we decode it here, parse_qs returns
-        # a dictionary of unicode strings, which actually contain split-up
-        # UTF-8 bytes, and then we're dead in the water. So, don't do this.
+        # border. However, this is actually disastrous, because pinput may be
+        # uuencoded. It we decode it here, parse_qs returns a dictionary of
+        # unicode strings, which contain split-up UTF-8 bytes, and then we're
+        # dead in the water. So, don't do this.
         #if not isinstance(pinput, unicode):
         #    try:
         #        pinput = unicode(pinput, 'utf-8')
