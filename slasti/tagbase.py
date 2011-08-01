@@ -217,7 +217,10 @@ class TagMark:
             f.close()
             return
 
-        self.tags = string.split(string.rstrip(s, "\r\n"), " ")
+        s = string.rstrip(s, "\r\n")
+        # Stripping spaces prevents emply tags coming out of split().
+        s = string.strip(s, " ")
+        self.tags = string.split(s, " ")
 
         f.close()
 
@@ -243,10 +246,11 @@ class TagMark:
         # The urllib.quote_plus does not work as expected: it escapes ':' and
         # such too, so "http://host" turns into "http%3A//host", and this
         # corrupts the link. So, hand-roll quotes and XML escapes for now.
+        # N.B. Mooneyspace.com hates when we reaplace '&' with %26, so don't.
         ## url = urllib.quote_plus(self.url)
         url = self.url
         url = url.replace('"', '%22')
-        url = url.replace('&', '%26')
+        # url = url.replace('&', '%26')
         url = url.replace('<', '%3C')
         url = url.replace('>', '%3E')
 
