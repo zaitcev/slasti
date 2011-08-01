@@ -547,10 +547,10 @@ def edit_form_mark(output, ctx, mark):
 
     output.append('  title '+
                   '<input name=title type=text size=100 maxlength=1023'+
-                  ' value="%s" /><br>\n' % mark.title)
+                  ' value="%s" /><br>\n' % cgi.escape(mark.title, 1))
     output.append('  URL '+
                   '<input name=href type=text size=100 maxlength=1023'+
-                  ' value="%s" /><br>\n' % mark.url)
+                  ' value="%s" /><br>\n' % cgi.escape(mark.url, 1))
     tagstr = " ".join(mark.tags)
     # tagstr = cgi.escape(tagstr, 1)
     output.append('  tags '+
