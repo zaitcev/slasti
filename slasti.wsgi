@@ -220,6 +220,10 @@ def application(environ, start_response):
         start_response("405 Method Not Allowed",
                        [('Content-type', 'text/plain'), ('Allow', 'GET')])
         return ["405 Method %s not allowed\r\n" % slasti.safestr(unicode(e))]
+    except slasti.AppPostError, e:
+        start_response("405 Method Not Allowed",
+                       [('Content-type', 'text/plain'), ('Allow', 'POST')])
+        return ["405 Method %s not allowed\r\n" % slasti.safestr(unicode(e))]
     except slasti.AppGetPostError, e:
         start_response("405 Method Not Allowed",
                        [('Content-type', 'text/plain'), ('Allow', 'GET, POST')])

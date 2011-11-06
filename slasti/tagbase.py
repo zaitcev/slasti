@@ -531,6 +531,19 @@ class TagBase:
         self.store(markname, stampkey, title, url, note, new_tags)
         self.links_edit(markname, old_tags, new_tags)
 
+    def delete(self, timeint, fix):
+        stampkey = "%010d.%02d" % (timeint, fix)
+        if fix == 0:
+            markname = "%010d" % timeint
+        else:
+            markname = stampkey
+        old_tags = read_tags(self.markdir, markname)
+        self.links_del(markname, old_tags)
+        try:
+            os.unlink(self.markdir+"/"+markname)
+        except IOError, e:
+            raise AppError(str(e))
+
     def __iter__(self):
         return TagMarkCursor(self)
 
