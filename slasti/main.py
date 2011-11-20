@@ -415,7 +415,7 @@ def login_form(start_response, ctx):
     output.append('<head><meta http-equiv="Content-Type"'+
                   ' content="text/html; charset=UTF-8"></head>\n')
     output.append('<body>\n')
-    output.append('<form action="%s/login" method=POST>\n' % userpath)
+    output.append('<form action="%s/login" method="POST">\n' % userpath)
     output.append(
         '  %s: <input name=password type=password size=32 maxlength=32 />\n' %
         username)
@@ -537,16 +537,27 @@ def edit_form_new(output, ctx):
                 (userpath, username, WHITESTAR)
     spit_lead(output, ctx, left_lead)
 
-    output.append('<form action="%s/edit" method=POST>' % userpath)
-    output.append('  title '+
-                  '<input name=title type=text size=100 maxlength=1023 /><br>')
-    output.append('  URL '+
-                  '<input name=href type=text size=100 maxlength=1023 /><br />')
-    output.append('  tags '+
-                  '<input name=tags type=text size=100 maxlength=1023 /><br />')
-    output.append('  extra '+
-                  '<input name=extra type=text size=100 maxlength=1023 /><br>')
-    output.append('  <input name=action type=submit value="Save" />\n')
+    output.append('<form action="%s/edit" method="POST">' % userpath)
+    output.append(' <table>\n<tr>\n')
+    output.append('  <td>Title\n'+
+                  '  <td><input name="title" type="text"'+
+                  ' size=80 maxlength=1023 />')
+    output.append(' </tr><tr>\n')
+    output.append('  <td>URL '+
+                  '  <td><input name="href" type="text"'+
+                  ' size=95 maxlength=1023 />')
+    output.append(' </tr><tr>\n')
+    output.append('  <td>tags '+
+                  '  <td><input name="tags" type="text"'+
+                  ' size=95 maxlength=1023 />')
+    output.append(' </tr><tr>\n')
+    output.append('  <td>Extra '+
+                  '  <td><input name="extra" type="text"'+
+                  ' size=95 maxlength=1023 />')
+    output.append(' </tr><tr>\n')
+    output.append('  <td colspan=2>'+
+                  ' <input name=action type=submit value="Save" />\n')
+    output.append(' </tr></table>')
     output.append('</form>\n')
 
 def edit_form_mark(output, ctx, mark):
@@ -563,24 +574,35 @@ def edit_form_mark(output, ctx, mark):
 
     output.append('<form action="%s/mark.%d.%02d" method="POST">\n' %
                    (userpath, stamp0, stamp1))
+    output.append(' <table>\n<tr>\n')
 
-    output.append('  title '+
-                  '<input name=title type=text size=100 maxlength=1023'+
-                  ' value="%s" /><br>\n' % cgi.escape(mark.title, 1))
-    output.append('  URL '+
-                  '<input name=href type=text size=100 maxlength=1023'+
-                  ' value="%s" /><br>\n' % cgi.escape(mark.url, 1))
+    output.append('  <td>Title\n'+
+                  '  <td><input name="title" type="text"'+
+                  ' size=80 maxlength=1023'+
+                  ' value="%s" />\n' % cgi.escape(mark.title, 1))
+    output.append(' </tr><tr>\n')
+    output.append('  <td>URL '+
+                  '  <td><input name="href" type="text"'+
+                  ' size=95 maxlength=1023'+
+                  ' value="%s" />\n' % cgi.escape(mark.url, 1))
+    output.append(' </tr><tr>\n')
     tagstr = " ".join(mark.tags)
     # tagstr = cgi.escape(tagstr, 1)
-    output.append('  tags '+
-                  '<input name=tags type=text size=100 maxlength=1023'+
-                  ' value="%s" /><br>\n' % tagstr)
+    output.append('  <td>tags '+
+                  '  <td><input name="tags" type="text"'+
+                  ' size=95 maxlength=1023'+
+                  ' value="%s" />\n' % tagstr)
+    output.append(' </tr><tr>\n')
     # notestr = cgi.escape(slasti.safestr(mark.note), 1)
     notestr = cgi.escape(mark.note, 1)
-    output.append('  extra '+
-                  '<input name=extra type=text size=100 maxlength=1023'+
-                  ' value="%s" /><br>\n' % notestr)
-    output.append('  <input name=action type=submit value="Save" />\n')
+    output.append('  <td>Extra '+
+                  '  <td><input name="extra" type="text"'+
+                  ' size=95 maxlength=1023'+
+                  ' value="%s" />\n' % notestr)
+    output.append(' </tr><tr>\n')
+    output.append('  <td colspan=2>\n')
+    output.append('   <input name=action type=submit value="Save" />\n')
+    output.append(' </tr></table>\n')
     output.append('</form>\n')
 
     output.append('<p>or</p>\n')
