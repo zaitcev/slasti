@@ -2,8 +2,6 @@
 // <!-- <script type="text/javascript"> -->
 
 function preload_title(fetch_url, title_id, button_id) {
-    // XXX Disable the button while request is outstanding
-    // XXX Add a timeout
 
     // Fetch the user input from the form
     var tgt_url = document.editform.href.value;
