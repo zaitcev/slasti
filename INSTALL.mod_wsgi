@@ -1,14 +1,34 @@
-[root@elanor ~]# ls /usr/lib/slasti-mod/slasti/
-__init__.py  __init__.pyc  tagbase.py  tagbase.pyc
-[root@elanor ~]# ls -F /var/www/slasti/
-zaitcev/
+----- initial installation of files:
 
+# Pre-make directories in default locations.
+mkdir /usr/lib/slasti-mod /usr/lib/slasti-mod/slasti
+mkdir /var/www/wsgi-scripts
+mkdir /var/www/slasti
+
+# Assuming $HOME/slasti is the base directory (tarball or git repo).
+cp $HOME/slasti/slasti/* /usr/lib/slasti-mod/slasti/
+cp $HOME/slasti/edit.js /var/www/slasti/
+cp $HOME/slasti/slasti.wsgi /var/www/wsgi-scripts
+
+[root@elanor ~]# ls /usr/lib/slasti-mod/slasti/
+__init__.py  __init__.pyc  main.py  main.pyc  tagbase.py  tagbase.pyc
+
+# Assuming users were added as described in INSTALL.
+[root@elanor ~]# ls -F /var/www/slasti/
+edit.js  zaitcev/
+
+# Optionally, pre-populate user's database.
 python del2sla.py /var/www/slasti/zaitcev z-delicious.xml
 
+# You might also want add/edit robots.txt, at least prohibit /login
+# (obviously, it adds no extra security, but helps decluttering logs).
+
 ----- version elanor (mounted to /slasti):
+
 #
 # WSGI Alias: like ScriptAlias, but for WSGI
 #
+Alias /slasti/edit.js /var/www/slasti/edit.js
 WSGISocketPrefix run/wsgi
 WSGIDaemonProcess slasti processes=2 threads=6 python-path=/usr/lib/slasti-mod
 WSGIProcessGroup slasti
@@ -26,6 +46,7 @@ SetEnv slasti.userconf /etc/slasti-users.conf
 </Directory>
 
 ----- version yukiho (mounted to root):
+
 # The WSGISocketPrefix must be set outside of virtual hosts.
 WSGISocketPrefix run/wsgi
 
@@ -38,6 +59,7 @@ WSGISocketPrefix run/wsgi
     #LogLevel info
 
     # Since WSGI is mounted to root, all statics have to alias.
+    Alias /edit.js /var/www/virt/slasti.zaitcev.us/edit.js
     Alias /robots.txt /var/www/virt/slasti.zaitcev.us/robots.txt
     Alias /favicon.ico /var/www/virt/slasti.zaitcev.us/favicon.ico
     Alias /favicon.png /var/www/virt/slasti.zaitcev.us/favicon.png
