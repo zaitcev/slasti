@@ -13,6 +13,9 @@ import cgi
 import base64
 import os
 import hashlib
+import httplib
+# XXX sgmllib was removed in Python 3.0
+import sgmllib
 
 from slasti import AppError, App400Error, AppLoginError, App404Error
 from slasti import AppGetError, AppGetPostError
@@ -237,6 +240,86 @@ def delete_post(start_response, ctx):
 
     output.append('<p>Deleted.</p>\n')
     output.append("</body></html>\n")
+    return output
+
+def fetch_url(query):
+    if query == None or query == "":
+        raise App400Error("no query")
+    qdic = urlparse.parse_qs(query)
+    if not qdic.has_key('url'):
+        raise App400Error("no url tag")
+    urlist = qdic['url']
+    if len(urlist) < 1:
+        raise App400Error("bad url tag")
+    return urlist[0]
+
+class FetchParser(sgmllib.SGMLParser):
+    def __init__(self, verbose=0):
+        sgmllib.SGMLParser.__init__(self, verbose)
+        self.in_title = False
+        self.titlestr = None
+    def start_title(self, attributes):
+        self.in_title = True
+    def end_title(self):
+        self.in_title = False
+    def handle_data(self, data):
+        if self.in_title:
+            self.titlestr = data
+
+def fetch_parse(chunk):
+    parser = FetchParser()
+    parser.feed(chunk)
+    parser.close()
+    if parser.titlestr == None:
+        return "(none)"
+    return parser.titlestr
+
+# XXX This may need switching to urllib yet, if 301 redirects become a problem.
+def fetch_body(url):
+    # XXX Seriously, sanitize url before parsing
+
+    scheme, host, path, u_par, u_query, u_frag = urlparse.urlparse(url)
+    if scheme != 'http' and scheme != 'https':
+        raise App400Error("bad url scheme")
+
+    headers = {}
+    # XXX Forward the Referer: that we received from the client, if any.
+
+    if scheme == 'http':
+        conn = httplib.HTTPConnection(host, timeout=25)
+    else:
+        conn = httplib.HTTPSConnection(host, timeout=25)
+
+    conn.request("GET", path, None, headers)
+    response = conn.getresponse()
+    # XXX A different return code for 201 and 204?
+    if response.status != 200:
+        raise App400Error("target error %d" % response.status)
+
+    typeval = response.getheader("Content-Type")
+    if typeval == None:
+        raise App400Error("target no type")
+    typestr = string.split(typeval, ";")
+    if len(typestr) == 0:
+        raise App400Error("target type none")
+    if typestr[0] != 'text/html':
+        raise App400Error("target type %s" % typestr[0])
+
+    body = response.read(10000)
+    return body
+
+#
+# The server-side indirection requires extreme care to prevent abuse.
+# User may hit us with URLs that point to generated pages, slow servers, etc.
+# As the last resort, we never work as a generic proxy.
+#
+def fetch_get(start_response, ctx):
+    url = fetch_url(ctx.query)
+    body = fetch_body(url)
+    title = fetch_parse(body)
+
+    output = ['%s\r\n' % title]
+    start_response("200 OK", [('Content-type', 'text/plain')])
     return output
 
 def mark_post(start_response, ctx, mark):
@@ -531,29 +614,42 @@ def login_verify(ctx):
 def edit_form_new(output, ctx):
     username = ctx.user['name']
     userpath = ctx.prefix+'/'+username
+    editpath = ctx.prefix+'/edit.js'
+    fetchpath = userpath+'/fetchtitle'
 
     left_lead = '  <h2 style="margin-bottom:0">'+\
                 '<a href="%s/">%s</a> / [%s]</h2>\n' % \
                 (userpath, username, WHITESTAR)
     spit_lead(output, ctx, left_lead)
 
-    output.append('<form action="%s/edit" method="POST">' % userpath)
+    title_id = "title1"
+    button_id = "button1"
+    output.append('<script src="%s"></script>\n' % editpath)
+    # The "editform" has to be a paramter to preload_title() too. Maybe later.
+    output.append('<form action="%s/edit" method="POST" name="editform">' %
+                   userpath)
     output.append(' <table>\n<tr>\n')
     output.append('  <td>Title\n'+
                   '  <td><input name="title" type="text"'+
-                  ' size=80 maxlength=1023 />')
+                  ' size=80 maxlength=1023 id="%s"/>\n' % title_id)
+    output.append('      <input name="preload" value="Preload" type="button"')
+    strfmt = "&quot;%s&quot;"
+    hanfmt = ' onclick="preload_title(%s,%s,%s);"' % (strfmt,strfmt,strfmt)
+    output.append(hanfmt % (fetchpath, title_id, button_id))
+    output.append(' id="%s">\n' % button_id)
+
     output.append(' </tr><tr>\n')
     output.append('  <td>URL '+
                   '  <td><input name="href" type="text"'+
-                  ' size=95 maxlength=1023 />')
+                  ' size=95 maxlength=1023 />\n')
     output.append(' </tr><tr>\n')
     output.append('  <td>tags '+
                   '  <td><input name="tags" type="text"'+
-                  ' size=95 maxlength=1023 />')
+                  ' size=95 maxlength=1023 />\n')
     output.append(' </tr><tr>\n')
     output.append('  <td>Extra '+
                   '  <td><input name="extra" type="text"'+
-                  ' size=95 maxlength=1023 />')
+                  ' size=95 maxlength=1023 />\n')
     output.append(' </tr><tr>\n')
     output.append('  <td colspan=2>'+
                   ' <input name=action type=submit value="Save" />\n')
@@ -680,6 +776,11 @@ def delete(start_response, ctx):
         return delete_post(start_response, ctx)
     raise AppPostError(ctx.method)
 
+def fetch_title(start_response, ctx):
+    if ctx.method == 'GET':
+        return fetch_get(start_response, ctx)
+    raise AppGetError(ctx.method)
+
 #
 # Request paths:
 #   ''                  -- default index (page.XXXX.XX)
@@ -688,6 +789,7 @@ def delete(start_response, ctx):
 #   export.xml          -- del-compatible XML
 #   edit                -- PUT or POST here, GET may have ?query
 #   delete              -- POST
+#   fetchtitle          -- GET with ?query
 #   login               -- GET or POST to obtain a cookie (not snoop-proof)
 #   anime/              -- tag (must have slash)
 #   anime/page.1293667202.11  -- tag page off this down
@@ -707,6 +809,10 @@ def app(start_response, ctx):
         if ctx.flogin == 0:
             raise AppLoginError()
         return delete(start_response, ctx)
+    if ctx.path == "fetchtitle":
+        if ctx.flogin == 0:
+            raise AppLoginError()
+        return fetch_title(start_response, ctx)
     if ctx.path == "":
         return root_mark_html(start_response, ctx)
     if ctx.path == "export.xml":
