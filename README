@@ -1,8 +1,9 @@
 Unfortunately, Oishii was taken, so Slasti it is. It's good to be trilingual.
 
 TODO:
- - add COPYING
+ - make the login cookie expire quickly against cookie capture at public WiFi
  - invoke del2sla from an upload form
- - make the loging cookie expire quickly
+ - dedup URLs (show found ones at the time at entry)
+ - search, aggregate in tags page - for tablets with poort ^F
 
 zaitcev@yahoo.com
