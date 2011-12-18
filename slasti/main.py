@@ -597,7 +597,7 @@ def login_verify(ctx):
     except ValueError:
         return 0
     now = int(time.time())
-    if now < when:
+    if now < when or now >= when + 1209600:
         return 0
     if flags != '-':
         return 0
