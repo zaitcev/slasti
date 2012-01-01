@@ -1,8 +1,8 @@
 = requirements
 
-Slasti works through WSGI interface to a webserver, so it needs mod_wsgi.
-See INSTALL.mod_wsgi for specifics. It also needs Python 2.6 or thereabout.
-No database is used.
+Slasti works through WSGI interface to a webserver, so mod_wsgi is typically
+employed. See INSTALL.mod_wsgi for specifics. It also needs Python 2.6 or
+thereabout. No database is used.
 
 = passwords
 
@@ -25,3 +25,12 @@ password with the user. Then, hash them together:
 
 The result of md5sum goes into the "pass" field. See the example
 slasti-users.conf for the JSON syntax.
+
+= SSL
+
+Since the authentication in Slasti is cookie-based, it is very important
+to use SSL. However, although Slasti is usually deployed with SSL,
+currently it is not SSL-aware. There will be no bugging to use SSL
+for logins, and no explicit "secure mode". The best approach is still
+being searched. Meanwhile, configure Apache like you would for any
+SSL-enabled service, then always use https:// schema.
