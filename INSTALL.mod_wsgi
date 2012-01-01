@@ -23,6 +23,12 @@ python del2sla.py /var/www/slasti/zaitcev z-delicious.xml
 # You might also want add/edit robots.txt, at least prohibit /login
 # (obviously, it adds no extra security, but helps decluttering logs).
 
+----- Notes
+
+Configuration snippets below presume a stock Apache configuration
+already existing, so "NameVirtualHost *:443" and the like are assumed
+as necessary. Only parts specific to WSGI and Slasti are documented.
+
 ----- version elanor (mounted to /slasti):
 
 #
@@ -50,13 +56,18 @@ SetEnv slasti.userconf /etc/slasti-users.conf
 # The WSGISocketPrefix must be set outside of virtual hosts.
 WSGISocketPrefix run/wsgi
 
-<VirtualHost *:80>
+<VirtualHost *:443>
     ServerName slasti.zaitcev.us
     DocumentRoot /var/www/virt/slasti.zaitcev.us
     ServerAdmin nonono@kotori.zaitcev.us
     ErrorLog logs/slasti.zaitcev.us-error_log
     CustomLog logs/slasti.zaitcev.us-access_log combined
     #LogLevel info
+    SSLEngine on
+    SSLProtocol all -SSLv2
+    SSLCipherSuite RC4-SHA:AES128-SHA:ALL:!ADH:!EXP:!LOW:!MD5:!SSLV2:!NULL
+    SSLCertificateFile /etc/pki/tls/certs/zaitcev.us.cert.pem
+    SSLCertificateKeyFile /etc/pki/tls/private/zaitcev.us.key.pem
 
     # Since WSGI is mounted to root, all statics have to alias.
     Alias /edit.js /var/www/virt/slasti.zaitcev.us/edit.js
