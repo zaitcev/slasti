@@ -130,6 +130,25 @@ def findmark(ctx, query):
         raise App400Error("bad mark format")
     return (stamp0, stamp1)
 
+def findpar(ctx, query, keys):
+    qdic = urlparse.parse_qs(query)
+
+    # unclear on scope rules here, let's use non-aliasing names for now
+    # may be learn how to lambda in Python later
+    def onekey(dic, k):
+        if not dic.has_key(k):
+            return None
+        mlist = dic[k]
+        if len(mlist) < 1:
+            return None
+        return mlist[0]
+
+    ret = {}
+    for key in keys:
+        ret[key] = onekey(qdic, key)
+
+    return ret
+
 def page_any_html(start_response, ctx, mark_top):
     username = ctx.user['name']
     userpath = ctx.prefix+'/'+username
@@ -611,11 +630,26 @@ def login_verify(ctx):
 
     return 1
 
-def edit_form_new(output, ctx):
+def new_form(start_response, ctx):
     username = ctx.user['name']
     userpath = ctx.prefix+'/'+username
     editpath = ctx.prefix+'/edit.js'
     fetchpath = userpath+'/fetchtitle'
+
+    query = ctx.query
+    if query == None or query == "":
+        title = None
+        href = None
+    else:
+        rdic = findpar(ctx, query, ['title', 'href'])
+        title = rdic['title']
+        href = rdic['href']
+
+    start_response("200 OK", [('Content-type', 'text/html')])
+    output = ['<html>\n']
+    output.append('<head><meta http-equiv="Content-Type"'+
+                  ' content="text/html; charset=UTF-8"></head>\n')
+    output.append('<body>\n')
 
     left_lead = '  <h2 style="margin-bottom:0">'+\
                 '<a href="%s/">%s</a> / [%s]</h2>\n' % \
@@ -631,7 +665,8 @@ def edit_form_new(output, ctx):
     output.append(' <table>\n<tr>\n')
     output.append('  <td>Title\n'+
                   '  <td><input name="title" type="text"'+
-                  ' size=80 maxlength=1023 id="%s"/>\n' % title_id)
+                  ' size=80 maxlength=1023 id="%s" value="%s" />\n' %
+                   (title_id, title))
     output.append('      <input name="preload" value="Preload" type="button"')
     strfmt = "&quot;%s&quot;"
     hanfmt = ' onclick="preload_title(%s,%s,%s);"' % (strfmt,strfmt,strfmt)
@@ -641,7 +676,7 @@ def edit_form_new(output, ctx):
     output.append(' </tr><tr>\n')
     output.append('  <td>URL '+
                   '  <td><input name="href" type="text"'+
-                  ' size=95 maxlength=1023 />\n')
+                  ' size=95 maxlength=1023 value="%s" />\n' % href)
     output.append(' </tr><tr>\n')
     output.append('  <td>tags '+
                   '  <td><input name="tags" type="text"'+
@@ -656,11 +691,28 @@ def edit_form_new(output, ctx):
     output.append(' </tr></table>')
     output.append('</form>\n')
 
-def edit_form_mark(output, ctx, mark):
+    output.append("<hr />\n")
+    output.append("</body></html>\n")
+    return output
+
+def edit_form(start_response, ctx):
     username = ctx.user['name']
     userpath = ctx.prefix+'/'+username
 
-    (stamp0, stamp1) = mark.key()
+    query = ctx.query
+    if query == None or query == "":
+        raise App400Error("not mark parameter")
+
+    (stamp0, stamp1) = findmark(ctx, query)
+    mark = ctx.base.lookup(stamp0, stamp1)
+    if mark == None:
+        raise App400Error("not found: "+str(stamp0)+"."+str(stamp1))
+
+    start_response("200 OK", [('Content-type', 'text/html')])
+    output = ['<html>\n']
+    output.append('<head><meta http-equiv="Content-Type"'+
+                  ' content="text/html; charset=UTF-8"></head>\n')
+    output.append('<body>\n')
 
     left_lead = '  <h2 style="margin-bottom:0">'+\
                 '<a href="%s/">%s</a> / %s</h2>\n' % \
@@ -709,28 +761,6 @@ def edit_form_mark(output, ctx, mark):
     output.append('  (There is no undo.)\n')
     output.append('</form>\n')
 
-def edit_form(start_response, ctx):
-    username = ctx.user['name']
-    userpath = ctx.prefix+'/'+username
-
-    query = ctx.query
-    if query == None or query == "":
-        mark = None
-    else:
-        (stamp0, stamp1) = findmark(ctx, query)
-        mark = ctx.base.lookup(stamp0, stamp1)
-        if mark == None:
-            raise App400Error("not found: "+str(stamp0)+"."+str(stamp1))
-
-    start_response("200 OK", [('Content-type', 'text/html')])
-    output = ['<html>\n']
-    output.append('<head><meta http-equiv="Content-Type"'+
-                  ' content="text/html; charset=UTF-8"></head>\n')
-    output.append('<body>\n')
-    if mark == None:
-        edit_form_new(output, ctx)
-    else:
-        edit_form_mark(output, ctx, mark)
     output.append("<hr />\n")
     output.append("</body></html>\n")
     return output
@@ -764,6 +794,11 @@ def edit_post(start_response, ctx):
     output.append('</body></html>\n')
     return output
 
+def new(start_response, ctx):
+    if ctx.method == 'GET':
+        return new_form(start_response, ctx)
+    raise AppGetError(ctx.method)
+
 def edit(start_response, ctx):
     if ctx.method == 'GET':
         return edit_form(start_response, ctx)
@@ -787,6 +822,7 @@ def fetch_title(start_response, ctx):
 #   page.1296951840.00  -- page off this down
 #   mark.1296951840.00
 #   export.xml          -- del-compatible XML
+#   new                 -- GET for the form
 #   edit                -- PUT or POST here, GET may have ?query
 #   delete              -- POST
 #   fetchtitle          -- GET with ?query
@@ -801,6 +837,10 @@ def app(start_response, ctx):
 
     if ctx.path == "login":
         return login(start_response, ctx)
+    if ctx.path == "new":
+        if ctx.flogin == 0:
+            raise AppLoginError()
+        return new(start_response, ctx)
     if ctx.path == "edit":
         if ctx.flogin == 0:
             raise AppLoginError()
