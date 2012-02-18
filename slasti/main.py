@@ -221,7 +221,7 @@ def delete_post(start_response, ctx):
     path = ctx.prefix+'/'+ctx.user['name']
 
     query = ctx.pinput
-    if query == None or query == "":
+    if not query:
         raise App400Error("no mark to delete")
     (stamp0, stamp1) = findmark(ctx, query)
     ctx.base.delete(stamp0, stamp1);
@@ -243,7 +243,7 @@ def delete_post(start_response, ctx):
     return output
 
 def fetch_url(query):
-    if query == None or query == "":
+    if not query:
         raise App400Error("no query")
     qdic = urlparse.parse_qs(query)
     if not qdic.has_key('url'):
