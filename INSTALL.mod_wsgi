@@ -17,6 +17,10 @@ __init__.py  __init__.pyc  main.py  main.pyc  tagbase.py  tagbase.pyc
 [root@elanor ~]# ls -F /var/www/slasti/
 edit.js  zaitcev/
 
+# Edit /etc/slasti-users.conf, then create users accordingly.
+mkdir /var/www/slasti/zaitcev
+chown apache /var/www/slasti/zaitcev
+
 # Optionally, pre-populate user's database.
 python del2sla.py /var/www/slasti/zaitcev z-delicious.xml
 
