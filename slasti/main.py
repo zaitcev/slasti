@@ -82,7 +82,7 @@ def spit_lead(output, ctx, left_lead):
             output.append(' [<a href="%s/login?savedref=%s">login</a>]' %
                           (userpath, ctx.path))
     output.append(' [<b><a href="%s/tags">tags</a></b>]' % userpath)
-    output.append(' [<a href="%s/edit">new</a>]' % userpath)
+    output.append(' [<a href="%s/new">new</a>]' % userpath)
     if ctx.flogin == 0:
         output.append(' [e]')
     else:
@@ -133,19 +133,12 @@ def findmark(ctx, query):
 def findpar(ctx, query, keys):
     qdic = urlparse.parse_qs(query)
 
-    # unclear on scope rules here, let's use non-aliasing names for now
-    # may be learn how to lambda in Python later
-    def onekey(dic, k):
-        if not dic.has_key(k):
-            return None
-        mlist = dic[k]
-        if len(mlist) < 1:
-            return None
-        return mlist[0]
-
     ret = {}
     for key in keys:
-        ret[key] = onekey(qdic, key)
+        try:
+            ret[key] = qdic[key][0]
+        except (KeyError, IndexError):
+            ret[key] = None
 
     return ret
 
@@ -240,7 +233,7 @@ def delete_post(start_response, ctx):
     path = ctx.prefix+'/'+ctx.user['name']
 
     query = ctx.pinput
-    if query == None or query == "":
+    if not query:
         raise App400Error("no mark to delete")
     (stamp0, stamp1) = findmark(ctx, query)
     ctx.base.delete(stamp0, stamp1);
@@ -262,7 +255,7 @@ def delete_post(start_response, ctx):
     return output
 
 def fetch_url(query):
-    if query == None or query == "":
+    if not query:
         raise App400Error("no query")
     qdic = urlparse.parse_qs(query)
     if not qdic.has_key('url'):
@@ -637,13 +630,14 @@ def new_form(start_response, ctx):
     fetchpath = userpath+'/fetchtitle'
 
     query = ctx.query
-    if query == None or query == "":
+    if not query:
         title = None
         href = None
     else:
         rdic = findpar(ctx, query, ['title', 'href'])
-        title = rdic['title']
-        href = rdic['href']
+        # not sure if the quote is necessary but let's be safe w/ user input
+        title = urllib.quote_plus(rdic['title'])
+        href = urllib.quote_plus(rdic['href'])
 
     start_response("200 OK", [('Content-type', 'text/html')])
     output = ['<html>\n']
@@ -665,8 +659,10 @@ def new_form(start_response, ctx):
     output.append(' <table>\n<tr>\n')
     output.append('  <td>Title\n'+
                   '  <td><input name="title" type="text"'+
-                  ' size=80 maxlength=1023 id="%s" value="%s" />\n' %
-                   (title_id, title))
+                  ' size=80 maxlength=1023 id="%s"' % title_id)
+    if title:
+        output.append(' value="%s"' % title)
+    output.append(' />\n');
     output.append('      <input name="preload" value="Preload" type="button"')
     strfmt = "&quot;%s&quot;"
     hanfmt = ' onclick="preload_title(%s,%s,%s);"' % (strfmt,strfmt,strfmt)
@@ -676,7 +672,10 @@ def new_form(start_response, ctx):
     output.append(' </tr><tr>\n')
     output.append('  <td>URL '+
                   '  <td><input name="href" type="text"'+
-                  ' size=95 maxlength=1023 value="%s" />\n' % href)
+                  ' size=95 maxlength=1023')
+    if href:
+        output.append(' value="%s"' % href)
+    output.append(' />\n')
     output.append(' </tr><tr>\n')
     output.append('  <td>tags '+
                   '  <td><input name="tags" type="text"'+
@@ -700,7 +699,7 @@ def edit_form(start_response, ctx):
     userpath = ctx.prefix+'/'+username
 
     query = ctx.query
-    if query == None or query == "":
+    if not query:
         raise App400Error("not mark parameter")
 
     (stamp0, stamp1) = findmark(ctx, query)
