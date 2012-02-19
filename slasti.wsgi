@@ -206,7 +206,7 @@ def application(environ, start_response):
 
     except AppError, e:
         start_response("500 Internal Error", [('Content-type', 'text/plain')])
-        return [slast.safestr(unicode(e)), "\r\n"]
+        return [slasti.safestr(unicode(e)), "\r\n"]
     except slasti.App400Error, e:
         start_response("400 Bad Request", [('Content-type', 'text/plain')])
         return ["400 Bad Request: %s\r\n" % slasti.safestr(unicode(e))]
