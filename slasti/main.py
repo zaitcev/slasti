@@ -214,12 +214,15 @@ def page_tag_html(start_response, ctx, tag, stamp0, stamp1):
     return page_any_html(start_response, ctx, mark)
 
 def page_empty_html(start_response, ctx):
+    username = ctx.user['name']
+    userpath = ctx.prefix+'/'+username
+
     start_response("200 OK", [('Content-type', 'text/html')])
     output = ["<html><body>\n"]
 
     left_lead = '  <h2 style="margin-bottom:0">'+\
                 '<a href="%s/">%s</a> / [-]</h2>\n' % \
-                (path, ctx.user['name'])
+                (userpath, username)
     spit_lead(output, ctx, left_lead)
 
     output.append("<hr />\n")
