@@ -122,7 +122,12 @@ def do_user(environ, start_response, path):
 
     method = environ['REQUEST_METHOD']
     if method == 'POST':
-        pinput = environ['wsgi.input'].readline()
+        try:
+            clen = int(environ["CONTENT_LENGTH"])
+        except (KeyError, ValueError):
+            pinput = environ['wsgi.input'].readline()
+        else:
+            pinput = environ['wsgi.input'].read(clen)
         # Every Unicode-in-Python preso on the Internet says to decode on the
         # border. However, this is actually disastrous, because pinput may be
         # uuencoded. It we decode it here, parse_qs returns a dictionary of
