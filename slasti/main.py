@@ -5,7 +5,6 @@
 # See file COPYING for licensing information (expect GPL 2).
 #
 
-import string
 import time
 import urllib
 import urlparse
@@ -120,7 +119,7 @@ def findmark(ctx, query):
     mlist = qdic['mark']
     if len(mlist) < 1:
         raise App400Error("bad mark tag")
-    p = string.split(mlist[0], ".")
+    p = mlist[0].split(".")
     if len(p) != 2:
         raise App400Error("bad mark format")
     try:
@@ -314,7 +313,7 @@ def fetch_body(url):
     typeval = response.getheader("Content-Type")
     if typeval == None:
         raise App400Error("target no type")
-    typestr = string.split(typeval, ";")
+    typestr = typeval.split(";")
     if len(typestr) == 0:
         raise App400Error("target type none")
     if typestr[0] != 'text/html':
@@ -866,12 +865,12 @@ def app(start_response, ctx):
     if "/" in ctx.path:
         # Trick: by splitting with limit 2 we prevent users from poisoning
         # the tag with slashes. Not that it matters all that much, but still.
-        p = string.split(ctx.path, "/", 2)
+        p = ctx.path.split("/", 2)
         tag = p[0]
         page = p[1]
         if page == "":
             return root_tag_html(start_response, ctx, tag)
-        p = string.split(page, ".")
+        p = page.split(".")
         if len(p) != 3:
             raise App404Error("Not found: "+ctx.path)
         try:
@@ -883,7 +882,7 @@ def app(start_response, ctx):
             return page_tag_html(start_response, ctx, tag, stamp0, stamp1)
         raise App404Error("Not found: "+ctx.path)
     else:
-        p = string.split(ctx.path, ".")
+        p = ctx.path.split(".")
         if len(p) != 3:
             raise App404Error("Not found: "+ctx.path)
         try:
