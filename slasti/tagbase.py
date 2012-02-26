@@ -7,7 +7,6 @@
 # requires:
 #  codecs
 #
-import string
 import codecs
 utf8_writer = codecs.getwriter("utf-8")
 import os
@@ -106,7 +105,7 @@ def read_tags(markdir, markname):
     if s == None or len(s) == 0:
         f.close()
         return []
-    tags = split_marks(string.rstrip(s, "\r\n"))
+    tags = split_marks(s.rstrip("\r\n"))
 
     f.close()
     return tags
@@ -182,7 +181,7 @@ class TagMark:
             return
         # Format is defined as two integers over a dot, which unfortunately
         # looks like a decimal fraction. Should've used a space. Oh well.
-        slist = string.split(string.rstrip(s, "\r\n"), ".")
+        slist = s.rstrip("\r\n").split(".")
         if len(slist) != 2:
             self.stamp1 = 3
             f.close()
@@ -200,29 +199,29 @@ class TagMark:
         if s == None or len(s) == 0:
             f.close()
             return
-        self.title = string.rstrip(s, "\r\n");
+        self.title = s.rstrip("\r\n")
 
         s = f.readline()
         if s == None or len(s) == 0:
             f.close()
             return
-        self.url = string.rstrip(s, "\r\n");
+        self.url = s.rstrip("\r\n")
 
         s = f.readline()
         if s == None or len(s) == 0:
             f.close()
             return
-        self.note = string.rstrip(s, "\r\n");
+        self.note = s.rstrip("\r\n")
 
         s = f.readline()
         if s == None or len(s) == 0:
             f.close()
             return
 
-        s = string.rstrip(s, "\r\n")
+        s = s.rstrip("\r\n")
         # Stripping spaces prevents emply tags coming out of split().
-        s = string.strip(s, " ")
-        self.tags = string.split(s, " ")
+        s = s.strip(" ")
+        self.tags = s.split(" ")
 
         f.close()
 
