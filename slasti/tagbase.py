@@ -73,7 +73,8 @@ def load_tag(tagdir, tag):
 
 def read_tags(markdir, markname):
     try:
-        f = open(markdir+"/"+markname, "r")
+        f = codecs.open(markdir+"/"+markname, "r",
+                        encoding="utf-8", errors="replace")
     except IOError:
         return []
 
@@ -167,7 +168,8 @@ class TagMark:
         self.tags = []
 
         try:
-            f = open(base.markdir+"/"+markname, "r")
+            f = codecs.open(base.markdir+"/"+markname, "r",
+                            encoding="utf-8", errors="replace")
         except IOError:
             # Set a red tag to tell us where we crashed.
             self.stamp1 = 1
@@ -228,8 +230,8 @@ class TagMark:
         # There do not seem to be any exceptions raised with weird inputs.
         datestr = time.strftime("%Y-%m-%d", time.gmtime(self.stamp0))
         return self.ourlist[self.ourindex]+'|'+datestr+'|'+\
-               self.title+'|'+self.url+'|'+self.note+"|"+\
-               slasti.safestr(unicode(self.tags))
+               slasti.safestr(self.title)+'|'+self.url+'|'+\
+               slasti.safestr(self.note)+"|"+slasti.safestr(self.tags)
 
     def key(self):
         return (self.stamp0, self.stamp1)
