@@ -5,6 +5,8 @@
 # See file COPYING for licensing information (expect GPL 2).
 #
 
+import urllib
+
 class AppError(Exception):
     pass
 class App400Error(Exception):
@@ -24,6 +26,10 @@ def safestr(u):
     if isinstance(u, unicode):
         return u.encode('utf-8')
     return u
+
+def escapeURLComponent(s):
+    # Turn s into a bytes first, quote_plus blows up otherwise
+    return unicode(urllib.quote_plus(s.encode("utf-8")))
 
 class Context:
     def __init__(self, pfx, user, base, method, path, query, pinput, coos):

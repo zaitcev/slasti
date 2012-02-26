@@ -73,7 +73,8 @@ def load_tag(tagdir, tag):
 
 def read_tags(markdir, markname):
     try:
-        f = open(markdir+"/"+markname, "r")
+        f = codecs.open(markdir+"/"+markname, "r",
+                        encoding="utf-8", errors="replace")
     except IOError:
         return []
 
@@ -167,7 +168,8 @@ class TagMark:
         self.tags = []
 
         try:
-            f = open(base.markdir+"/"+markname, "r")
+            f = codecs.open(base.markdir+"/"+markname, "r",
+                            encoding="utf-8", errors="replace")
         except IOError:
             # Set a red tag to tell us where we crashed.
             self.stamp1 = 1
@@ -228,8 +230,8 @@ class TagMark:
         # There do not seem to be any exceptions raised with weird inputs.
         datestr = time.strftime("%Y-%m-%d", time.gmtime(self.stamp0))
         return self.ourlist[self.ourindex]+'|'+datestr+'|'+\
-               self.title+'|'+self.url+'|'+self.note+"|"+\
-               slasti.safestr(unicode(self.tags))
+               slasti.safestr(self.title)+'|'+self.url+'|'+\
+               slasti.safestr(self.note)+"|"+slasti.safestr(self.tags)
 
     def key(self):
         return (self.stamp0, self.stamp1)
@@ -246,7 +248,7 @@ class TagMark:
         # The urllib.quote_plus does not work as expected: it escapes ':' and
         # such too, so "http://host" turns into "http%3A//host", and this
         # corrupts the link. So, hand-roll quotes and XML escapes for now.
-        # N.B. Mooneyspace.com hates when we reaplace '&' with %26, so don't.
+        # N.B. Mooneyspace.com hates when we replace '&' with %26, so don't.
         ## url = urllib.quote_plus(self.url)
         url = self.url
         url = url.replace('"', '%22')
@@ -418,7 +420,7 @@ class TagBase:
     #
     # XXX Add locking for consistency of concurrent updates
 
-    # Store the tag body
+    # Store the mark body
     def store(self, markname, stampkey, title, url, note, tags):
         try:
             f = open(self.markdir+"/"+markname, "w+")

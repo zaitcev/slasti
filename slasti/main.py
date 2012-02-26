@@ -63,7 +63,7 @@ def edit_anchor_html(mark, path, text):
 def tag_anchor_html(tag, path):
     if tag == None:
         return ' -'
-    tagu = urllib.quote_plus(tag)
+    tagu = slasti.escapeURLComponent(tag)
     tagt = unicode(cgi.escape(slasti.safestr(tag)),'utf-8')
     return ' <a href="%s/%s/">%s</a>' % (path, tagu, tagt)
 
