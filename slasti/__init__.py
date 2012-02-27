@@ -53,4 +53,23 @@ class Context:
         # flogin: Login flag, to be derived from self.user and self.cookies.
         self.flogin = 0
 
+    def create_jsondict(self):
+        userpath = self.prefix+'/'+self.user['name']
+
+        jsondict = {"name_user": self.user["name"],
+                    "href_user": userpath,
+                    "href_tags": "%s/tags" % userpath,
+                    "href_new": "%s/new" % userpath,
+                   }
+        if self.flogin:
+            jsondict["href_export"]= userpath + '/export.xml'
+            jsondict["href_login"] = None
+        else:
+            jsondict["href_export"]= None
+            jsondict["href_login"] = "%s/login" % userpath
+            if self.path and self.path != "login" and self.path != "edit":
+                jsondict["href_login"] += '?savedref=%s/%s' % (userpath,
+                                                               self.path)
+        return jsondict
+
 import main, tagbase

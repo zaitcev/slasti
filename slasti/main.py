@@ -20,6 +20,7 @@ from slasti import AppError, App400Error, AppLoginError, App404Error
 from slasti import AppGetError, AppGetPostError
 import slasti
 import tagbase
+import slasti.template
 
 PAGESZ = 25
 
@@ -40,54 +41,11 @@ def page_back(mark):
         n += 1
     return mark
 
-def page_anchor_html(mark, path, text):
-    if mark == None:
-        return '[-]'
+def page_url_from_mark(mark, path):
+    if mark is None:
+        return None
     (stamp0, stamp1) = mark.key()
-    return '[<a href="%s/page.%d.%02d">%s</a>]' % (path, stamp0, stamp1, text)
-
-def mark_anchor_html(mark, path, text):
-    if mark == None:
-        return '[-]'
-    (stamp0, stamp1) = mark.key()
-    return '[<a href="%s/mark.%d.%02d">%s</a>]' % (path, stamp0, stamp1, text)
-
-def edit_anchor_html(mark, path, text):
-    if mark == None:
-        return '[-]'
-    (stamp0, stamp1) = mark.key()
-    return '[<a href="%s/edit?mark=%d.%02d">%s</a>]' % \
-           (path, stamp0, stamp1, text)
-
-def tag_anchor_html(tag, path):
-    if tag == None:
-        return ' -'
-    tagu = slasti.escapeURLComponent(tag)
-    tagt = unicode(cgi.escape(slasti.safestr(tag)),'utf-8')
-    return ' <a href="%s/%s/">%s</a>' % (path, tagu, tagt)
-
-def spit_lead(output, ctx, left_lead):
-    username = ctx.user['name']
-    userpath = ctx.prefix+'/'+username
-
-    output.append('<table width="100%" style="background: #ebf7eb" ' +
-                  'border=0 cellpadding=1 cellspacing=0><tr valign="top">\n')
-    output.append('<td align="left">%s</td>\n' % left_lead)
-    output.append('<td align="right">')
-    if ctx.flogin == 0:
-        if ctx.path == "" or ctx.path == "login" or ctx.path == "edit":
-            output.append(' [<a href="%s/login">login</a>]' % userpath)
-        else:
-            output.append(' [<a href="%s/login?savedref=%s">login</a>]' %
-                          (userpath, ctx.path))
-    output.append(' [<b><a href="%s/tags">tags</a></b>]' % userpath)
-    output.append(' [<a href="%s/new">new</a>]' % userpath)
-    if ctx.flogin == 0:
-        output.append(' [e]')
-    else:
-        output.append(' [<a href="%s/export.xml">e</a>]' % userpath)
-    output.append('</td>\n')
-    output.append('</tr></table>\n')
+    return '%s/page.%d.%02d' % (path, stamp0, stamp1)
 
 # qdic = urlparse.parse_qs(ctx.pinput)
 def fix_post_args(qdic):
@@ -142,57 +100,36 @@ def findpar(ctx, query, keys):
     return ret
 
 def page_any_html(start_response, ctx, mark_top):
-    username = ctx.user['name']
-    userpath = ctx.prefix+'/'+username
-
+    userpath = ctx.prefix+'/'+ctx.user['name']
     what = mark_top.tag()
-    if what == None:
-        path = ctx.prefix+'/'+username
-        what = BLACKSTAR
+
+    if what:
+        path = userpath + '/' + what
     else:
-        path = ctx.prefix+'/'+username+'/'+what
-        what = what+'/'
+        path = userpath
 
     start_response("200 OK", [('Content-type', 'text/html')])
-    output = ['<html>\n']
-    output.append('<head><meta http-equiv="Content-Type"'+
-                  ' content="text/html; charset=UTF-8"></head>\n')
-    output.append('<body>\n')
-
-    left_lead = '  <h2 style="margin-bottom:0">'+\
-                '<a href="%s/">%s</a> / %s</h2>\n' % \
-                (userpath, username, what)
-    spit_lead(output, ctx, left_lead)
+    jsondict = ctx.create_jsondict()
+    jsondict["current_tag"] = what
+    jsondict["marks"] = []
 
     mark = mark_top
     mark_next = None
     n = 0
-    while n < PAGESZ:
-        (stamp0, stamp1) = mark.key()
-        datestr = time.strftime("%Y-%m-%d", time.gmtime(stamp0))
-
-        output.append("<p>%s %s " %
-                      (datestr, mark_anchor_html(mark, userpath, WHITESTAR)))
-        output.append(mark.html())
-        output.append("<br>\n")
-        for tag in mark.tags:
-            output.append(tag_anchor_html(tag, userpath))
-        output.append("</p>\n")
+    for n in range(PAGESZ):
+        jsondict["marks"].append(mark.to_jsondict(userpath))
 
         mark_next = mark.succ()
         if mark_next == None:
             break
         mark = mark_next
-        n += 1
 
-    output.append("<hr />\n")
-    output.append(page_anchor_html(page_back(mark_top), path, "&laquo;"))
-    output.append(page_anchor_html(mark_top,            path, BLACKSTAR))
-    output.append(page_anchor_html(mark_next,           path, "&raquo;"))
-    output.append("<br />\n")
-
-    output.append("</body></html>\n")
-    return output
+    jsondict.update({
+            "href_page_prev": page_url_from_mark(page_back(mark_top), path),
+            "href_page_this": page_url_from_mark(mark_top, path),
+            "href_page_next": page_url_from_mark(mark_next, path),
+            })
+    return [slasti.template.template_html_page.substitute(jsondict)]
 
 def page_mark_html(start_response, ctx, stamp0, stamp1):
     mark = ctx.base.lookup(stamp0, stamp1)
@@ -217,19 +154,12 @@ def page_empty_html(start_response, ctx):
     userpath = ctx.prefix+'/'+username
 
     start_response("200 OK", [('Content-type', 'text/html')])
-    output = ["<html><body>\n"]
-
-    left_lead = '  <h2 style="margin-bottom:0">'+\
-                '<a href="%s/">%s</a> / [-]</h2>\n' % \
-                (userpath, username)
-    spit_lead(output, ctx, left_lead)
-
-    output.append("<hr />\n")
-    output.append('[-] [-] [-]')
-    output.append("<br />\n")
-
-    output.append("</body></html>\n")
-    return output
+    jsondict = ctx.create_jsondict()
+    jsondict.update({
+                "current_tag": "[-]",
+                "marks": [],
+               })
+    return [slasti.template.template_html_page.substitute(jsondict)]
 
 def delete_post(start_response, ctx):
     path = ctx.prefix+'/'+ctx.user['name']
@@ -241,20 +171,8 @@ def delete_post(start_response, ctx):
     ctx.base.delete(stamp0, stamp1);
 
     start_response("200 OK", [('Content-type', 'text/html')])
-
-    output = ['<html>\n']
-    output.append('<head><meta http-equiv="Content-Type"'+
-                  ' content="text/html; charset=UTF-8"></head>\n')
-    output.append('<body>\n')
-
-    left_lead = '  <h2 style="margin-bottom:0">'+\
-                '<a href="%s/">%s</a></h2>\n' % \
-                (path, ctx.user['name'])
-    spit_lead(output, ctx, left_lead)
-
-    output.append('<p>Deleted.</p>\n')
-    output.append("</body></html>\n")
-    return output
+    jsondict = ctx.create_jsondict()
+    return [slasti.template.template_html_delete.substitute(jsondict)]
 
 def fetch_url(query):
     if not query:
@@ -355,40 +273,15 @@ def mark_get(start_response, ctx, mark, stamp0):
     path = ctx.prefix+'/'+ctx.user['name']
 
     start_response("200 OK", [('Content-type', 'text/html')])
-    output = ['<html>\n']
-    output.append('<head><meta http-equiv="Content-Type"'+
-                  ' content="text/html; charset=UTF-8"></head>\n')
-    output.append('<body>\n')
-
-    left_lead = '  <h2 style="margin-bottom:0">'+\
-                '<a href="%s/">%s</a></h2>\n' % \
-                (path, ctx.user['name'])
-    spit_lead(output, ctx, left_lead)
-
-    output.append("<p>")
-    datestr = time.strftime("%Y-%m-%d", time.gmtime(stamp0))
-    output.append(datestr)
-    output.append("<br>\n")
-    output.append(mark.html())
-    output.append("<br>\n")
-    for tag in mark.tags:
-        output.append(tag_anchor_html(tag, path))
-    output.append("</p>\n")
-
-    # This looks ugly in browser.
-    if ctx.flogin != 0:
-       output.append("<p>")
-       output.append(edit_anchor_html(mark, path, "edit"))
-       output.append("</p>\n")
-
-    output.append("<hr />\n")
-    output.append(mark_anchor_html(mark.pred(), path, "&laquo;"))
-    output.append(mark_anchor_html(mark,        path, WHITESTAR))
-    output.append(mark_anchor_html(mark.succ(), path, "&raquo;"))
-    output.append("<br />\n")
-
-    output.append("</body></html>\n")
-    return output
+    jsondict = ctx.create_jsondict()
+    jsondict.update({
+                "marks": [mark.to_jsondict(path)],
+                "href_edit": mark.get_editpath(path),
+                "href_page_prev": page_url_from_mark(mark.pred(), path),
+                "href_page_this": page_url_from_mark(mark, path),
+                "href_page_next": page_url_from_mark(mark.succ(), path),
+               })
+    return [slasti.template.template_html_mark.substitute(jsondict)]
 
 def one_mark_html(start_response, ctx, stamp0, stamp1):
     mark = ctx.base.lookup(stamp0, stamp1)
@@ -462,31 +355,20 @@ def full_mark_xml(start_response, ctx):
 def full_tag_html(start_response, ctx):
     if ctx.method != 'GET':
         raise AppGetError(ctx.method)
-    username = ctx.user['name']
-    userpath = ctx.prefix+'/'+username
 
+    userpath = ctx.prefix + '/' + ctx.user['name']
     start_response("200 OK", [('Content-type', 'text/html')])
-    output = ['<html>\n']
-    output.append('<head><meta http-equiv="Content-Type"'+
-                  ' content="text/html; charset=UTF-8"></head>\n')
-    output.append('<body>\n')
-
-    left_lead = '  <h2 style="margin-bottom:0">'+\
-                '<a href="%s/">%s</a> / tags</h2>\n' % \
-                (userpath, username)
-    spit_lead(output, ctx, left_lead)
-
-    output.append("<p>")
+    jsondict = ctx.create_jsondict()
+    jsondict["current_tag"] = "tags"
+    jsondict["tags"] = []
     for tag in ctx.base.tagcurs():
         ref = tag.key()
-        output.append('<a href="%s/%s/">%s</a> %d<br />\n' %
-                      (userpath, ref, ref, tag.num()))
-    output.append("</p>")
-
-    output.append("<hr />\n")
-
-    output.append("</body></html>\n")
-    return output
+        jsondict["tags"].append(
+            {"href_tag": '%s/%s/' % (userpath, slasti.escapeURLComponent(ref)),
+             "name_tag": unicode(cgi.escape(slasti.safestr(ref)),'utf-8'),
+             "num_tagged": tag.num(),
+            })
+    return [slasti.template.template_html_tags.substitute(jsondict)]
 
 def login_findref(qdic):
     if not qdic.has_key('savedref'):
@@ -508,21 +390,12 @@ def login_form(start_response, ctx):
 
     start_response("200 OK", [('Content-type', 'text/html')])
 
-    output = ['<html>\n']
-    output.append('<head><meta http-equiv="Content-Type"'+
-                  ' content="text/html; charset=UTF-8"></head>\n')
-    output.append('<body>\n')
-    output.append('<form action="%s/login" method="POST">\n' % userpath)
-    output.append(
-        '  %s: <input name=password type=password size=32 maxlength=32 />\n' %
-        username)
-    output.append('  <input name=OK type=submit value="Enter" />\n')
-    if savedref:
-        output.append('  <input name=savedref type=hidden value="%s" />\n' %
-                      savedref)
-    output.append('</form>\n')
-    output.append("</body></html>\n")
-    return output
+    jsondict = {
+            "username": username,
+            "action_login": "%s/login" % userpath,
+            "savedref": savedref,
+            }
+    return [slasti.template.template_html_login.substitute(jsondict)]
 
 def login_post(start_response, ctx):
     username = ctx.user['name']
@@ -580,13 +453,8 @@ def login_post(start_response, ctx):
     response_headers.append(('Location', slasti.safestr(redihref)))
     start_response("303 See Other", response_headers)
 
-    output = ['<html>\n']
-    output.append('<head><meta http-equiv="Content-Type"'+
-                  ' content="text/html; charset=UTF-8"></head>\n')
-    output.append('<body>\n')
-    output.append('<p><a href="%s">See Other</a></p>\n' % redihref)
-    output.append('</body></html>\n')
-    return output
+    jsondict = { "href_redir": redihref }
+    return [slasti.template.template_html_redirect.substitute(jsondict)]
 
 def login(start_response, ctx):
     if ctx.method == 'GET':
@@ -626,10 +494,7 @@ def login_verify(ctx):
     return 1
 
 def new_form(start_response, ctx):
-    username = ctx.user['name']
-    userpath = ctx.prefix+'/'+username
-    editpath = ctx.prefix+'/edit.js'
-    fetchpath = userpath+'/fetchtitle'
+    userpath = ctx.prefix + '/' + ctx.user['name']
 
     query = ctx.query
     if not query:
@@ -641,64 +506,23 @@ def new_form(start_response, ctx):
         title = urllib.quote_plus(rdic['title'])
         href = urllib.quote_plus(rdic['href'])
 
+    jsondict = ctx.create_jsondict()
+    jsondict.update({
+            "id_title": "title1",
+            "id_button": "button1",
+            "href_editjs": ctx.prefix + '/edit.js',
+            "href_fetch": userpath + '/fetchtitle',
+            "mark": None,
+            "current_tag": "[" + WHITESTAR + "]",
+            "action_edit": userpath + '/edit',
+            "val_title": title,
+            "val_href": href,
+        })
     start_response("200 OK", [('Content-type', 'text/html')])
-    output = ['<html>\n']
-    output.append('<head><meta http-equiv="Content-Type"'+
-                  ' content="text/html; charset=UTF-8"></head>\n')
-    output.append('<body>\n')
-
-    left_lead = '  <h2 style="margin-bottom:0">'+\
-                '<a href="%s/">%s</a> / [%s]</h2>\n' % \
-                (userpath, username, WHITESTAR)
-    spit_lead(output, ctx, left_lead)
-
-    title_id = "title1"
-    button_id = "button1"
-    output.append('<script src="%s"></script>\n' % editpath)
-    # The "editform" has to be a paramter to preload_title() too. Maybe later.
-    output.append('<form action="%s/edit" method="POST" name="editform">' %
-                   userpath)
-    output.append(' <table>\n<tr>\n')
-    output.append('  <td>Title\n'+
-                  '  <td><input name="title" type="text"'+
-                  ' size=80 maxlength=1023 id="%s"' % title_id)
-    if title:
-        output.append(' value="%s"' % title)
-    output.append(' />\n');
-    output.append('      <input name="preload" value="Preload" type="button"')
-    strfmt = "&quot;%s&quot;"
-    hanfmt = ' onclick="preload_title(%s,%s,%s);"' % (strfmt,strfmt,strfmt)
-    output.append(hanfmt % (fetchpath, title_id, button_id))
-    output.append(' id="%s">\n' % button_id)
-
-    output.append(' </tr><tr>\n')
-    output.append('  <td>URL '+
-                  '  <td><input name="href" type="text"'+
-                  ' size=95 maxlength=1023')
-    if href:
-        output.append(' value="%s"' % href)
-    output.append(' />\n')
-    output.append(' </tr><tr>\n')
-    output.append('  <td>tags '+
-                  '  <td><input name="tags" type="text"'+
-                  ' size=95 maxlength=1023 />\n')
-    output.append(' </tr><tr>\n')
-    output.append('  <td>Extra '+
-                  '  <td><input name="extra" type="text"'+
-                  ' size=95 maxlength=1023 />\n')
-    output.append(' </tr><tr>\n')
-    output.append('  <td colspan=2>'+
-                  ' <input name=action type=submit value="Save" />\n')
-    output.append(' </tr></table>')
-    output.append('</form>\n')
-
-    output.append("<hr />\n")
-    output.append("</body></html>\n")
-    return output
+    return [slasti.template.template_html_editform.substitute(jsondict)]
 
 def edit_form(start_response, ctx):
-    username = ctx.user['name']
-    userpath = ctx.prefix+'/'+username
+    userpath = ctx.prefix + '/' + ctx.user['name']
 
     query = ctx.query
     if not query:
@@ -706,65 +530,28 @@ def edit_form(start_response, ctx):
 
     (stamp0, stamp1) = findmark(ctx, query)
     mark = ctx.base.lookup(stamp0, stamp1)
-    if mark == None:
+    if not mark:
         raise App400Error("not found: "+str(stamp0)+"."+str(stamp1))
 
+    jsondict = ctx.create_jsondict()
+    jsondict.update({
+        "id_title": "title1",
+        "id_button": "button1",
+        "href_editjs": ctx.prefix + '/edit.js',
+        "href_fetch": userpath + '/fetchtitle',
+        "mark": mark.to_jsondict(userpath),
+        "current_tag": WHITESTAR,
+        "href_current_tag": '%s/mark.%d.%02d' % (userpath, stamp0, stamp1),
+        "action_edit": "%s/mark.%d.%02d" % (userpath, stamp0, stamp1),
+        "action_delete": userpath + '/delete',
+        "val_title": cgi.escape(unicode(mark.title, "utf-8"), 1),
+        "val_href": cgi.escape(mark.url, 1),
+        "val_tags": cgi.escape(' '.join(mark.tags), 1),
+        "val_note": cgi.escape(mark.note, 1),
+        })
+
     start_response("200 OK", [('Content-type', 'text/html')])
-    output = ['<html>\n']
-    output.append('<head><meta http-equiv="Content-Type"'+
-                  ' content="text/html; charset=UTF-8"></head>\n')
-    output.append('<body>\n')
-
-    left_lead = '  <h2 style="margin-bottom:0">'+\
-                '<a href="%s/">%s</a> / %s</h2>\n' % \
-                (userpath, username,
-                 mark_anchor_html(mark, userpath, WHITESTAR))
-    spit_lead(output, ctx, left_lead)
-
-    output.append('<form action="%s/mark.%d.%02d" method="POST">\n' %
-                   (userpath, stamp0, stamp1))
-    output.append(' <table>\n<tr>\n')
-
-    output.append('  <td>Title\n'+
-                  '  <td><input name="title" type="text"'+
-                  ' size=80 maxlength=1023'+
-                  ' value="%s" />\n' % cgi.escape(mark.title, 1))
-    output.append(' </tr><tr>\n')
-    output.append('  <td>URL '+
-                  '  <td><input name="href" type="text"'+
-                  ' size=95 maxlength=1023'+
-                  ' value="%s" />\n' % cgi.escape(mark.url, 1))
-    output.append(' </tr><tr>\n')
-    tagstr = " ".join(mark.tags)
-    # tagstr = cgi.escape(tagstr, 1)
-    output.append('  <td>tags '+
-                  '  <td><input name="tags" type="text"'+
-                  ' size=95 maxlength=1023'+
-                  ' value="%s" />\n' % tagstr)
-    output.append(' </tr><tr>\n')
-    # notestr = cgi.escape(slasti.safestr(mark.note), 1)
-    notestr = cgi.escape(mark.note, 1)
-    output.append('  <td>Extra '+
-                  '  <td><input name="extra" type="text"'+
-                  ' size=95 maxlength=1023'+
-                  ' value="%s" />\n' % notestr)
-    output.append(' </tr><tr>\n')
-    output.append('  <td colspan=2>\n')
-    output.append('   <input name=action type=submit value="Save" />\n')
-    output.append(' </tr></table>\n')
-    output.append('</form>\n')
-
-    output.append('<p>or</p>\n')
-    output.append('<form action="%s/delete" method="POST">\n' % (userpath))
-    output.append('  <input name=mark type=hidden value="%d.%02d" />\n' %
-                   (stamp0, stamp1))
-    output.append('  <input name=action type=submit value="Delete" />\n')
-    output.append('  (There is no undo.)\n')
-    output.append('</form>\n')
-
-    output.append("<hr />\n")
-    output.append("</body></html>\n")
-    return output
+    return [slasti.template.template_html_editform.substitute(jsondict)]
 
 # The name edit_post() is a bit misleading, because POST to /edit is used
 # to create new marks, not to edit existing ones (see mark_post() for that).
@@ -787,13 +574,8 @@ def edit_post(start_response, ctx):
     response_headers.append(('Location', slasti.safestr(redihref)))
     start_response("303 See Other", response_headers)
 
-    output = ['<html>\n']
-    output.append('<head><meta http-equiv="Content-Type"'+
-                  ' content="text/html; charset=UTF-8"></head>\n')
-    output.append('<body>\n')
-    output.append('<p><a href="%s">See Other</a></p>\n' % redihref)
-    output.append('</body></html>\n')
-    return output
+    jsondict = { "href_redir": redihref }
+    return [slasti.template.template_html_redirect.substitute(jsondict)]
 
 def new(start_response, ctx):
     if ctx.method == 'GET':
