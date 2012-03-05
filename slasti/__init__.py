@@ -68,8 +68,7 @@ class Context:
             jsondict["href_export"]= None
             jsondict["href_login"] = "%s/login" % userpath
             if self.path and self.path != "login" and self.path != "edit":
-                jsondict["href_login"] += '?savedref=%s/%s' % (userpath,
-                                                               self.path)
+                jsondict["href_login"] += '?savedref=%s' % self.path
         return jsondict
 
 import main, tagbase
