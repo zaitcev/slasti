@@ -493,6 +493,30 @@ def login_verify(ctx):
 
     return 1
 
+html_escape_table = {
+    ">": "&gt;",
+    "<": "&lt;",
+    "&": "&amp;",
+    '"': "&quot;",
+    "'": "&apos;",
+    "\\": "&#92;",
+    }
+
+def html_escape(text):
+    """Escape strings to be safe for use anywhere in HTML
+
+    Should be used for escaping any user-supplied strings values before
+    outputting them in HTML. The output is safe to use HTML running text and
+    within HTML attributes (e.g. value="%s").
+
+    Escaped chars:
+      < and >   HTML tags
+      &         HTML entities
+      " and '   Allow use within HTML tag attributes
+      \\        Shouldn't actually be necessary, but better safe than sorry
+    """
+    return "".join(html_escape_table.get(c,c) for c in text)
+
 def new_form(start_response, ctx):
     userpath = ctx.prefix + '/' + ctx.user['name']
 
@@ -503,8 +527,8 @@ def new_form(start_response, ctx):
     else:
         rdic = findpar(ctx, query, ['title', 'href'])
         # not sure if the quote is necessary but let's be safe w/ user input
-        title = urllib.quote_plus(rdic['title'])
-        href = urllib.quote_plus(rdic['href'])
+        title = html_escape(rdic['title'].decode('utf-8'))
+        href = html_escape(rdic['href'].decode('utf-8'))
 
     jsondict = ctx.create_jsondict()
     jsondict.update({

@@ -10,11 +10,8 @@ TODO:
 zaitcev@yahoo.com
 
 ----- bookmarklet - XXX not parameterized; XXX login needs fixing
-  <a href='javascript:
-           var F=document;
-           var ref = "";
-           ref += "https://slasti.zaitcev.us/zaitcev/new";
-           ref += "?title=" + F.title;
-           ref += "&href=" + location.href;
-           F.location = ref  /* causes browser to load the ref */
-          '>Post to Slasti</a>
+  <a href="javascript:location.href=
+           'https://slasti.zaitcev.us/zaitcev/new' +
+           '?title=' + encodeURIComponent(document.title) +
+           '&href=' + encodeURIComponent(location.href)
+          ">Post to Slasti</a>
