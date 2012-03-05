@@ -5,10 +5,9 @@
 # See file COPYING for licensing information (expect GPL 2).
 #
 
-import string
 import json
 import types
-import sys
+# import sys
 import Cookie
 
 # CFGUSERS was replaced by  SetEnv slasti.userconf /slasti-users.conf
@@ -144,7 +143,7 @@ def do_user(environ, start_response, path):
         pinput = None
 
     # Query is already split away by the CGI.
-    parsed = string.split(path, "/", 2)
+    parsed = patch.split("/", 2)
 
     user = users.lookup(parsed[1])
     if user == None:
