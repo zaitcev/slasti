@@ -47,57 +47,26 @@ def page_url_from_mark(mark, path):
     (stamp0, stamp1) = mark.key()
     return '%s/page.%d.%02d' % (path, stamp0, stamp1)
 
-# qdic = urlparse.parse_qs(ctx.pinput)
-def fix_post_args(qdic):
+def find_post_args(ctx):
+    rdic = {}
+    for key in ['title', 'href', 'tags', 'extra']:
+        rdic[key] = ctx.get_pinput_arg(key) or ""
 
-    # 'href' & 'tags' must be non-empty, other keys are optional
-    for arg in ['href', 'tags']:
-        if not qdic.has_key(arg):
-            raise App400Error("no tag %s" % arg)
+    if not rdic["href"] or not rdic["tags"]:
+        raise App400Error("The URL and tags are mandatory")
 
-    argd = { }
-    for arg in ['title', 'href', 'tags', 'extra']:
-        # Empty actually ends here (browser may not send a key if empty).
-        if not qdic.has_key(arg):
-            argd[arg] = ""
-            continue
-        arglist = qdic[arg]
-        # This does not seem to happen even for empties, but be safe.
-        if len(arglist) < 1:
-            raise App400Error("bad tag %s" % arg)
-        # Convert into Unicode, else tagbase.store() blows up when writing.
-        argd[arg] = arglist[0].decode("utf-8", 'replace')
+    return rdic
 
-    return argd
-
-def findmark(ctx, query):
-    qdic = urlparse.parse_qs(query)
-    if not qdic.has_key('mark'):
+def findmark(mark_str):
+    if not mark_str:
         raise App400Error("no mark tag")
-    mlist = qdic['mark']
-    if len(mlist) < 1:
-        raise App400Error("bad mark tag")
-    p = mlist[0].split(".")
-    if len(p) != 2:
-        raise App400Error("bad mark format")
+    p = mark_str.split(".")
     try:
         stamp0 = int(p[0])
         stamp1 = int(p[1])
-    except ValueError:
+    except (ValueError, IndexError):
         raise App400Error("bad mark format")
     return (stamp0, stamp1)
-
-def findpar(ctx, query, keys):
-    qdic = urlparse.parse_qs(query)
-
-    ret = {}
-    for key in keys:
-        try:
-            ret[key] = qdic[key][0]
-        except (KeyError, IndexError):
-            ret[key] = None
-
-    return ret
 
 def page_any_html(start_response, ctx, mark_top):
     userpath = ctx.prefix+'/'+ctx.user['name']
@@ -164,26 +133,12 @@ def page_empty_html(start_response, ctx):
 def delete_post(start_response, ctx):
     path = ctx.prefix+'/'+ctx.user['name']
 
-    query = ctx.pinput
-    if not query:
-        raise App400Error("no mark to delete")
-    (stamp0, stamp1) = findmark(ctx, query)
+    (stamp0, stamp1) = findmark(ctx.get_pinput_arg("mark"))
     ctx.base.delete(stamp0, stamp1);
 
-    start_response("200 OK", [('Content-type', 'text/html')])
+    start_response("200 OK", [('Content-type', 'text/html; charset=utf-8')])
     jsondict = ctx.create_jsondict()
     return [slasti.template.template_html_delete.substitute(jsondict)]
-
-def fetch_url(query):
-    if not query:
-        raise App400Error("no query")
-    qdic = urlparse.parse_qs(query)
-    if not qdic.has_key('url'):
-        raise App400Error("no url tag")
-    urlist = qdic['url']
-    if len(urlist) < 1:
-        raise App400Error("bad url tag")
-    return urlist[0]
 
 class FetchParser(sgmllib.SGMLParser):
     def __init__(self, verbose=0):
@@ -246,7 +201,9 @@ def fetch_body(url):
 # As the last resort, we never work as a generic proxy.
 #
 def fetch_get(start_response, ctx):
-    url = fetch_url(ctx.query)
+    url = ctx.get_query_arg("url")
+    if not url:
+        raise App400Error("no query")
     body = fetch_body(url)
     title = fetch_parse(body)
 
@@ -255,7 +212,7 @@ def fetch_get(start_response, ctx):
     return output
 
 def mark_post(start_response, ctx, mark):
-    argd = fix_post_args(urlparse.parse_qs(ctx.pinput))
+    argd = find_post_args(ctx)
 
     tags = tagbase.split_marks(argd['tags'])
     (stamp0, stamp1) = mark.key()
@@ -370,26 +327,12 @@ def full_tag_html(start_response, ctx):
             })
     return [slasti.template.template_html_tags.substitute(jsondict)]
 
-def login_findref(qdic):
-    if not qdic.has_key('savedref'):
-        return None
-    qlist = qdic['savedref']
-    if len(qlist) < 1:
-        return None
-    return qlist[0]
-
 def login_form(start_response, ctx):
     username = ctx.user['name']
     userpath = ctx.prefix+'/'+username
-
-    if ctx.query == None:
-        savedref = None
-    else:
-        qdic = urlparse.parse_qs(ctx.query)
-        savedref = login_findref(qdic)
+    savedref = ctx.get_query_arg("savedref")
 
     start_response("200 OK", [('Content-type', 'text/html')])
-
     jsondict = {
             "username": username,
             "action_login": "%s/login" % userpath,
@@ -402,23 +345,16 @@ def login_post(start_response, ctx):
     userpath = ctx.prefix+'/'+username
 
     # pinput = "password=test&OK=Enter" and possibly a newline
-    qdic = urlparse.parse_qs(ctx.pinput)
-
-    savedref = login_findref(qdic)
+    savedref = ctx.get_pinput_arg("savedref")
     if savedref:
         savedref = savedref.decode("utf-8", 'replace')
         redihref = "%s/%s" % (userpath, savedref)
     else:
         redihref = "%s/" % userpath;
 
-    if not qdic.has_key('password'):
-        raise App400Error("no password tag")
-    plist = qdic['password']
-    if len(plist) < 1:
+    password = ctx.get_pinput_arg("password")
+    if not password:
         raise App400Error("bad password tag")
-    password = plist[0]
-    if len(password) < 1:
-        raise App400Error("empty password")
 
     # We do not require every user to have a password, in order to have
     # archive users or other pseudo-users. They cannot login, even if they
@@ -519,16 +455,8 @@ def html_escape(text):
 
 def new_form(start_response, ctx):
     userpath = ctx.prefix + '/' + ctx.user['name']
-
-    query = ctx.query
-    if not query:
-        title = None
-        href = None
-    else:
-        rdic = findpar(ctx, query, ['title', 'href'])
-        # not sure if the quote is necessary but let's be safe w/ user input
-        title = html_escape(rdic['title'].decode('utf-8'))
-        href = html_escape(rdic['href'].decode('utf-8'))
+    title = html_escape(ctx.get_query_arg('title'))
+    href = html_escape(ctx.get_query_arg('href'))
 
     jsondict = ctx.create_jsondict()
     jsondict.update({
@@ -548,11 +476,7 @@ def new_form(start_response, ctx):
 def edit_form(start_response, ctx):
     userpath = ctx.prefix + '/' + ctx.user['name']
 
-    query = ctx.query
-    if not query:
-        raise App400Error("not mark parameter")
-
-    (stamp0, stamp1) = findmark(ctx, query)
+    (stamp0, stamp1) = findmark(ctx.get_query_arg("mark"))
     mark = ctx.base.lookup(stamp0, stamp1)
     if not mark:
         raise App400Error("not found: "+str(stamp0)+"."+str(stamp1))
@@ -583,7 +507,7 @@ def edit_post(start_response, ctx):
     username = ctx.user['name']
     userpath = ctx.prefix+'/'+username
 
-    argd = fix_post_args(urlparse.parse_qs(ctx.pinput))
+    argd = find_post_args(ctx)
     tags = tagbase.split_marks(argd['tags'])
 
     stamp0 = int(time.time())
@@ -625,7 +549,7 @@ def fetch_title(start_response, ctx):
 
 def redirect_to_login(start_response, ctx):
     userpath = ctx.prefix + '/' + ctx.user['name']
-    thisref = ctx.path + '?' + urllib.quote_plus(ctx.query)
+    thisref = ctx.path + '?' + urllib.quote_plus(ctx._query)
     login_loc = userpath + '/login?savedref=' + thisref
     response_headers = [('Content-type', 'text/html'),
                         ('Location', slasti.safestr(login_loc))]
