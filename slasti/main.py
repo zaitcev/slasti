@@ -623,6 +623,17 @@ def fetch_title(start_response, ctx):
         return fetch_get(start_response, ctx)
     raise AppGetError(ctx.method)
 
+def redirect_to_login(start_response, ctx):
+    userpath = ctx.prefix + '/' + ctx.user['name']
+    thisref = ctx.path + '?' + urllib.quote_plus(ctx.query)
+    login_loc = userpath + '/login?savedref=' + thisref
+    response_headers = [('Content-type', 'text/html'),
+                        ('Location', slasti.safestr(login_loc))]
+    start_response("303 See Other", response_headers)
+
+    jsondict = { "href_redir": login_loc }
+    return [slasti.template.template_html_redirect.substitute(jsondict)]
+
 #
 # Request paths:
 #   ''                  -- default index (page.XXXX.XX)
@@ -646,7 +657,7 @@ def app(start_response, ctx):
         return login(start_response, ctx)
     if ctx.path == "new":
         if ctx.flogin == 0:
-            raise AppLoginError()
+            return redirect_to_login(start_response, ctx)
         return new(start_response, ctx)
     if ctx.path == "edit":
         if ctx.flogin == 0:
