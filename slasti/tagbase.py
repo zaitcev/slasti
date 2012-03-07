@@ -238,34 +238,6 @@ class TagMark:
     def tag(self):
         return self.ourtag;
 
-    def html(self):
-        title = self.title
-        if len(title) == 0:
-            title = self.url
-        title = cgi.escape(title, 1)
-
-        # The urllib.quote_plus does not work as expected: it escapes ':' and
-        # such too, so "http://host" turns into "http%3A//host", and this
-        # corrupts the link. So, hand-roll quotes and XML escapes for now.
-        # N.B. Mooneyspace.com hates when we replace '&' with %26, so don't.
-        ## url = urllib.quote_plus(self.url)
-        url = self.url
-        url = url.replace('"', '%22')
-        # url = url.replace('&', '%26')
-        url = url.replace('<', '%3C')
-        url = url.replace('>', '%3E')
-
-        tagstr = cgi.escape(" ".join(self.tags), 1)
-
-        anchor = '<a href="'+url+'">'+title+'</a>'
-
-        note = self.note
-        if len(note) == 0:
-            return anchor
-
-        note = cgi.escape(note)
-        return anchor+"<br />"+note
-
     def xml(self):
         datestr = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(self.stamp0))
 
@@ -286,6 +258,49 @@ class TagMark:
         fmt = '  <post href="%s" description="%s" tag="%s" time="%s"'+\
               ' extended="%s" />\n'
         return fmt % (url, title, tagstr, datestr, note)
+
+    def get_editpath(self, path_prefix):
+        return '%s/edit?mark=%d.%02d' % (path_prefix, self.stamp0, self.stamp1)
+
+    def to_jsondict(self, path_prefix):
+        title = self.title
+        if not title:
+            title = self.url
+
+        # The urllib.quote_plus does not work as expected: it escapes ':' and
+        # such too, so "http://host" turns into "http%3A//host", and this
+        # corrupts the link. So, hand-roll quotes and XML escapes for now.
+        # N.B. Mooneyspace.com hates when we replace '&' with %26, so don't.
+        ## url = urllib.quote_plus(self.url)
+        url = self.url
+        url = url.replace('"', '%22')
+        # url = url.replace('&', '%26')
+        url = url.replace('<', '%3C')
+        url = url.replace('>', '%3E')
+
+        mark_url = '%s/mark.%d.%02d' % (path_prefix, self.stamp0, self.stamp1)
+        ts = time.gmtime(self.stamp0)
+        jsondict = {
+            "date": time.strftime("%Y-%m-%d", ts),
+            "href_mark": mark_url,
+            "href_mark_url": url,
+            "title": cgi.escape(title, True),
+            "note": cgi.escape(self.note) if self.note else None,
+            "tags": [],
+            "key": "%d.%02d" % (self.stamp0, self.stamp1),
+        }
+
+        tags_str = []
+        for tag in self.tags:
+            tags_str.append(tag)
+            jsondict["tags"].append(
+                {"href_tag": '%s/%s/' % (path_prefix,
+                                         slasti.escapeURLComponent(tag)),
+                 "name_tag": tag,
+                })
+        jsondict["tags_str"] = ' '.join(tags_str)
+
+        return jsondict
 
     def succ(self):
         if self.ourindex+1 >= len(self.ourlist):

@@ -6,6 +6,7 @@
 #
 
 import urllib
+import urlparse
 
 class AppError(Exception):
     pass
@@ -44,13 +45,55 @@ class Context:
         # path: The remaining path after the user. Not the full URL path.
         # This may be empty (we permit user with no trailing slash).
         self.path = path
-        # query: The query string
-        self.query = query
-        # pinput: The 1 line of input for POST.
-        self.pinput = pinput
+        # _query: The query string as bytes. Use get_query_args() to access.
+        self._query = query
+        # _pinput: The 1 line of input for POST as bytes.
+        #          Use get_pinput_args() to access
+        self._pinput = pinput
         # cookies: Cookie class. May be None.
         self.cookies = coos
         # flogin: Login flag, to be derived from self.user and self.cookies.
         self.flogin = 0
+
+        self._query_args = None
+        self._pinput_args = None
+
+    def create_jsondict(self):
+        userpath = self.prefix+'/'+self.user['name']
+
+        jsondict = {"name_user": self.user["name"],
+                    "href_user": userpath,
+                    "href_tags": "%s/tags" % userpath,
+                    "href_new": "%s/new" % userpath,
+                   }
+        if self.flogin:
+            jsondict["href_export"]= userpath + '/export.xml'
+            jsondict["href_login"] = None
+        else:
+            jsondict["href_export"]= None
+            jsondict["href_login"] = "%s/login" % userpath
+            if self.path and self.path != "login" and self.path != "edit":
+                jsondict["href_login"] += '?savedref=%s' % self.path
+        return jsondict
+
+    def _parse_args(self, args):
+        if args is None:
+            return {}
+
+        qdic = urlparse.parse_qs(args)
+        for key in qdic:
+            qdic[key] = qdic[key][0]
+
+        return qdic
+
+    def get_query_arg(self, argname):
+        if self._query_args is None:
+            self._query_args = self._parse_args(self._query)
+        return self._query_args.get(argname, None)
+
+    def get_pinput_arg(self, argname):
+        if self._pinput_args is None:
+            self._pinput_args = self._parse_args(self._pinput)
+        return self._pinput_args.get(argname, None)
 
 import main, tagbase
