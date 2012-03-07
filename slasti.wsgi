@@ -143,7 +143,7 @@ def do_user(environ, start_response, path):
         pinput = None
 
     # Query is already split away by the CGI.
-    parsed = patch.split("/", 2)
+    parsed = path.split("/", 2)
 
     user = users.lookup(parsed[1])
     if user == None:

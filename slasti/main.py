@@ -19,8 +19,8 @@ import sgmllib
 from slasti import AppError, App400Error, AppLoginError, App404Error
 from slasti import AppGetError, AppGetPostError
 import slasti
-import tagbase
 import slasti.template
+import tagbase
 
 PAGESZ = 25
 
