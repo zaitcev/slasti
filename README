@@ -7,6 +7,15 @@ TODO:
  - search, aggregate in tags page - for tablets with poor ^F
  - localizations
 
+fixup TODO for templates:
+ - http://www.zaitcev.us/slasti/tester/login?savedref=%E3%82%A2%E3%83%8B%E3%83%BB%E3%83%8E%E3%83%BC%E3%83%88/
+   savedref = savedref.decode("utf-8", 'replace')
+   UnicodeEncodeError: 'ascii' codec can't encode characters in position 0-5: ordinal not in range(128)
+ - Hitting "Preload" ends with same, in fetch_get()
+   Maybe just drop templating for the helper.
+ - remove flooding print from template.py
+ - BLACKSTAR for individual marks in the path
+
 zaitcev@yahoo.com
 
 ----- bookmarklet - XXX not parameterized; XXX login needs fixing
@@ -15,3 +24,49 @@ zaitcev@yahoo.com
            '?title=' + encodeURIComponent(document.title) +
            '&href=' + encodeURIComponent(location.href)
           ">Post to Slasti</a>
+
+
+================================================================
+Slasti development notes
+
+Character encoding and HTML/URL escape strategy:
+As those two are pretty related, they presumably should be handled together in
+the same place.
+Internally, all data strings are unicode (there may be some byte strings
+for things like HTTP's "200 OK" and header names, but never for data).
+Decoding/encoding should be done "on the border" or very closeby.
+
+Decoding raw bytes on input:
+ * ctx.path is alrady unicode, this is handled by slasti.wsgi.
+ * pinput and query strings should be obtained via ctx.get_pinput_arg() and
+   ctx.get_query_arg() respectively. They handle encoding issues.
+
+The storage backend (i.e. tagbase.py) operates on unicode strings. Internally it
+stores tags base64 encoded as filenames, while content of bookmarks is saved in
+files encoded as utf-8.
+
+Encoding unicode strings on output:
+Can either be done in Template.substitute() (as currently) or in slasti.wsgi.
+Neither is particularly tricky. What's difficult, however, is proper escaping.
+
+The problem is that we actually want to escape strings in two different ways
+for output:
+ * URL encoding like urllib.quote() / urllib.quote_plus
+   Noteworthy: quote() output is bytes, but contains only [A-Za-z0-9_.%/+-]
+   Thus it can be turned into unicode with a unicode(quote(...)) conversion.
+   Also, calling cgi.escape() on the resulting string doesn't alter it.
+ * Generic HTML encoding like cgi.escape()
+   _Everything_ that ends up in the HTML file has to be escaped like this,
+   otherwise we're vulnerable to XSS attacks.
+
+Solution for the output encoding problem:
+ * Encode all user-generated content that ends up in URLs with
+   slasti.escapeURLComponent(). This does urllib.quote_plus() and returns
+   unicode.
+ * The bookmark URL can't be handled like that (because quote_plus clobbers the
+   :// portion of the URL). Use slasti.escapeURL(). The resulting string is
+   unicode and is safe to use within attributes.
+ * Everything else should end up in jsondict as unescaped unicode, escaping and
+   encoding is handled in the templating engine.
+ * Template().substitute() returns bytes. Don't mess with that, just return it
+   to the wsgi server.

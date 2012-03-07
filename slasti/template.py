@@ -9,6 +9,32 @@ import string
 import re
 
 
+html_escape_table = {
+    ">": "&gt;",
+    "<": "&lt;",
+    "&": "&amp;",
+    '"': "&quot;",
+    "'": "&apos;",
+    "\\": "&#92;",
+    }
+
+def escapeHTML(text):
+    """Escape strings to be safe for use anywhere in HTML
+
+    Should be used for escaping any user-supplied strings values before
+    outputting them in HTML. The output is safe to use HTML running text and
+    within HTML attributes (e.g. value="%s").
+
+    Escaped chars:
+      < and >   HTML tags
+      &         HTML entities
+      " and '   Allow use within HTML tag attributes
+      \\        Shouldn't actually be necessary, but better safe than sorry
+    """
+    # performance idea: compare with cgi.escape-like implementation
+    return "".join(html_escape_table.get(c,c) for c in text)
+
+
 class TemplateError(ValueError):
     def __init__(self, m, message):
         self.m = m
@@ -82,16 +108,27 @@ class DictWrapper:
             res = res[subitem]
         return res
 
+    def _enforce_encoding(self, s):
+        # handle HTML escaping stuff here
+        # character encoding is done on the finished expanded template
+        if isinstance(s, unicode):
+            return escapeHTML(s)
+        if isinstance(s, str):
+            print ("str found:", s)
+            return s
+        return s
+
     def __getitem__(self, item):
         # Separate the query into the real lookup string and the default
         # Then do the lookup; if it blows up or the result is None, return the
         # default. Otherwise return the looked up value
         lookup_str, default = self._parse_default(item)
+        default = self._enforce_encoding(default)
         try:
             lookup_result = self._do_lookup(lookup_str)
             if lookup_result is None:
                 return default
-            return lookup_result
+            return self._enforce_encoding(lookup_result)
         except (IndexError, KeyError) as e:
             # If we can't find a member/submember, return the default
             if default is not None:
@@ -295,8 +332,24 @@ class Template:
             raise TemplateError(m,
                     "Open %s clause at end of file" % stack[-1].name)
 
+    def _check_encoding(self, d):
+        if isinstance(d, dict):
+            for key in d:
+                self._check_encoding(d[key])
+            return
+        if isinstance(d, list):
+            for item in d:
+                self._check_encoding(item)
+            return
+        if d is None:
+            return
+        if isinstance(d, unicode) or isinstance(d, int):
+            return
+        print "->", type(d), repr(d)
+
     def substitute(self, d):
-        return self.template_tree.substitute(DictWrapper(d))
+        self._check_encoding(d)
+        return self.template_tree.substitute(DictWrapper(d)).encode("utf-8")
 
 template_html_header = Template("""
 <html>
@@ -502,6 +555,8 @@ template_html_editform = Template(
     </form>
     #end if
     """)
+
+template_simple_output = Template("""$output""")
 
 
 ## Normally not executed - test code
