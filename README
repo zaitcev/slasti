@@ -6,6 +6,7 @@ TODO:
  - dedup URLs (show found ones at the time of entry)
  - search, aggregate in tags page - for tablets with poor ^F
  - localizations
+ - tests (Christan's main() in template.py lacked verification)
 
 fixup TODO for templates:
  - http://www.zaitcev.us/slasti/tester/login?savedref=%E3%82%A2%E3%83%8B%E3%83%BB%E3%83%8E%E3%83%BC%E3%83%88/
