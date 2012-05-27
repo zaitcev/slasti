@@ -7,12 +7,12 @@
 # requires:
 #  codecs
 #
+
 import codecs
 utf8_writer = codecs.getwriter("utf-8")
 import os
 import errno
 import time
-# import urllib
 import cgi
 import base64
 
@@ -267,25 +267,14 @@ class TagMark:
         if not title:
             title = self.url
 
-        # The urllib.quote_plus does not work as expected: it escapes ':' and
-        # such too, so "http://host" turns into "http%3A//host", and this
-        # corrupts the link. So, hand-roll quotes and XML escapes for now.
-        # N.B. Mooneyspace.com hates when we replace '&' with %26, so don't.
-        ## url = urllib.quote_plus(self.url)
-        url = self.url
-        url = url.replace('"', '%22')
-        # url = url.replace('&', '%26')
-        url = url.replace('<', '%3C')
-        url = url.replace('>', '%3E')
-
         mark_url = '%s/mark.%d.%02d' % (path_prefix, self.stamp0, self.stamp1)
         ts = time.gmtime(self.stamp0)
         jsondict = {
-            "date": time.strftime("%Y-%m-%d", ts),
+            "date": unicode(time.strftime("%Y-%m-%d", ts)),
             "href_mark": mark_url,
-            "href_mark_url": url,
-            "title": cgi.escape(title, True),
-            "note": cgi.escape(self.note) if self.note else None,
+            "href_mark_url": slasti.escapeURL(self.url),
+            "title": title,
+            "note": self.note,
             "tags": [],
             "key": "%d.%02d" % (self.stamp0, self.stamp1),
         }
