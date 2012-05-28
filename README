@@ -1,4 +1,4 @@
-Slasti version 1.2
+Slasti version 1.90 (post-Christian checkpoint)
 Unfortunately, Oishii was taken, so Slasti it is. It's good to be trilingual.
 
 TODO:
@@ -7,6 +7,7 @@ TODO:
  - search, aggregate in tags page - for tablets with poor ^F
  - localizations
  - tests (Christan's main() in template.py lacked verification)
+ - template docs for 2.0
 
 fixup TODO for templates:
  - http://www.zaitcev.us/slasti/tester/login?savedref=%E3%82%A2%E3%83%8B%E3%83%BB%E3%83%8E%E3%83%BC%E3%83%88/
@@ -17,7 +18,7 @@ fixup TODO for templates:
  - remove flooding print from template.py
  - BLACKSTAR for individual marks in the path
 
-zaitcev@yahoo.com
+zaitcev@kotori.zaitcev.us
 
 ----- bookmarklet - XXX not parameterized; XXX login needs fixing
   <a href="javascript:location.href=
