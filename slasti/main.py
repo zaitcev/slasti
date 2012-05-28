@@ -19,8 +19,8 @@ import sgmllib
 from slasti import AppError, App400Error, AppLoginError, App404Error
 from slasti import AppGetError, AppGetPostError
 import slasti
-import slasti.template
 import tagbase
+from template import Template
 
 PAGESZ = 25
 
@@ -97,7 +97,7 @@ def page_any_html(start_response, ctx, mark_top):
             "href_page_this": page_url_from_mark(mark_top, path),
             "href_page_next": page_url_from_mark(mark_next, path),
             })
-    return [slasti.template.template_html_page.substitute(jsondict)]
+    return [template_html_page.substitute(jsondict)]
 
 def page_mark_html(start_response, ctx, stamp0, stamp1):
     mark = ctx.base.lookup(stamp0, stamp1)
@@ -127,7 +127,7 @@ def page_empty_html(start_response, ctx):
                 "current_tag": "[-]",
                 "marks": [],
                })
-    return [slasti.template.template_html_page.substitute(jsondict)]
+    return [template_html_page.substitute(jsondict)]
 
 def delete_post(start_response, ctx):
     path = ctx.prefix+'/'+ctx.user['name']
@@ -137,7 +137,7 @@ def delete_post(start_response, ctx):
 
     start_response("200 OK", [('Content-type', 'text/html; charset=utf-8')])
     jsondict = ctx.create_jsondict()
-    return [slasti.template.template_html_delete.substitute(jsondict)]
+    return [template_html_delete.substitute(jsondict)]
 
 class FetchParser(sgmllib.SGMLParser):
     def __init__(self, verbose=0):
@@ -208,7 +208,7 @@ def fetch_get(start_response, ctx):
 
     start_response("200 OK", [('Content-type', 'text/plain; charset=utf-8')])
     jsondict = { "output": '%s\r\n' % title }
-    return [slasti.template.template_simple_output.substitute(jsondict)]
+    return [template_simple_output.substitute(jsondict)]
 
 def mark_post(start_response, ctx, mark):
     argd = find_post_args(ctx)
@@ -237,7 +237,7 @@ def mark_get(start_response, ctx, mark, stamp0):
                 "href_page_this": page_url_from_mark(mark, path),
                 "href_page_next": page_url_from_mark(mark.succ(), path),
                })
-    return [slasti.template.template_html_mark.substitute(jsondict)]
+    return [template_html_mark.substitute(jsondict)]
 
 def one_mark_html(start_response, ctx, stamp0, stamp1):
     mark = ctx.base.lookup(stamp0, stamp1)
@@ -324,7 +324,7 @@ def full_tag_html(start_response, ctx):
              "name_tag": ref,
              "num_tagged": tag.num(),
             })
-    return [slasti.template.template_html_tags.substitute(jsondict)]
+    return [template_html_tags.substitute(jsondict)]
 
 def login_form(start_response, ctx):
     username = ctx.user['name']
@@ -337,7 +337,7 @@ def login_form(start_response, ctx):
             "action_login": "%s/login" % userpath,
             "savedref": savedref,
             }
-    return [slasti.template.template_html_login.substitute(jsondict)]
+    return [template_html_login.substitute(jsondict)]
 
 def login_post(start_response, ctx):
     username = ctx.user['name']
@@ -372,7 +372,7 @@ def login_post(start_response, ctx):
         start_response("403 Not Permitted",
                       [('Content-type', 'text/plain; charset=utf-8')])
         jsondict = { "output": "403 Not Permitted: Bad Password\r\n" }
-        return [slasti.template.template_simple_output.substitute(jsondict)]
+        return [template_simple_output.substitute(jsondict)]
 
     csalt = base64.b64encode(os.urandom(6))
     flags = "-"
@@ -391,7 +391,7 @@ def login_post(start_response, ctx):
     start_response("303 See Other", response_headers)
 
     jsondict = { "href_redir": redihref }
-    return [slasti.template.template_html_redirect.substitute(jsondict)]
+    return [template_html_redirect.substitute(jsondict)]
 
 def login(start_response, ctx):
     if ctx.method == 'GET':
@@ -448,7 +448,7 @@ def new_form(start_response, ctx):
             "val_href": href,
         })
     start_response("200 OK", [('Content-type', 'text/html; charset=utf-8')])
-    return [slasti.template.template_html_editform.substitute(jsondict)]
+    return [template_html_editform.substitute(jsondict)]
 
 def edit_form(start_response, ctx):
     userpath = ctx.prefix + '/' + ctx.user['name']
@@ -476,7 +476,7 @@ def edit_form(start_response, ctx):
         })
 
     start_response("200 OK", [('Content-type', 'text/html; charset=utf-8')])
-    return [slasti.template.template_html_editform.substitute(jsondict)]
+    return [template_html_editform.substitute(jsondict)]
 
 # The name edit_post() is a bit misleading, because POST to /edit is used
 # to create new marks, not to edit existing ones (see mark_post() for that).
@@ -500,7 +500,7 @@ def edit_post(start_response, ctx):
     start_response("303 See Other", response_headers)
 
     jsondict = { "href_redir": redihref }
-    return [slasti.template.template_html_redirect.substitute(jsondict)]
+    return [template_html_redirect.substitute(jsondict)]
 
 def new(start_response, ctx):
     if ctx.method == 'GET':
@@ -533,7 +533,7 @@ def redirect_to_login(start_response, ctx):
     start_response("303 See Other", response_headers)
 
     jsondict = { "href_redir": login_loc }
-    return [slasti.template.template_html_redirect.substitute(jsondict)]
+    return [template_html_redirect.substitute(jsondict)]
 
 #
 # Request paths:
@@ -613,3 +613,210 @@ def app(start_response, ctx):
         if p[0] == "page":
             return page_mark_html(start_response, ctx, stamp0, stamp1)
         raise App404Error("Not found: "+ctx.path)
+
+template_html_header = Template("""
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+</head>
+<body>
+""")
+
+template_html_body_top = Template("""
+<table width="100%" style="background: #ebf7eb"
+ border=0 cellpadding=1 cellspacing=0>
+<tr valign="top">
+    <td align="left">
+        <h2 style="margin-bottom:0">
+            <a href="$href_user">$name_user</a> /
+            #if ${href_current_tag:-}
+                <a href="$href_current_tag">
+            #end if
+            #if ${current_tag:-}
+                $current_tag
+            #else
+                &#9733;
+            #end if
+            #if ${href_current_tag:-}
+                </a>
+            #end if
+        </h2>
+    </td>
+    <td align="right">
+        #if $href_login
+            [<a href="$href_login">login</a>]
+        #end if
+        [<b><a href="$href_tags">tags</a></b>]
+        [<a href="$href_new">new</a>]
+        #if $href_export
+            [<a href="$href_export">e</a>]
+        #else
+            [e]
+        #end if
+    </td>
+</tr></table>
+""")
+
+
+template_html_body_bottom = Template("""
+<hr />
+#if ${href_page_prev:-}
+    [<a href="$href_page_prev">&laquo;</a>]
+#else
+    [-]
+#end if
+#if ${href_page_this:-}
+    [<a href="$href_page_this">&#9733;</a>]
+#else
+    [-]
+#end if
+#if ${href_page_next:-}
+    [<a href="$href_page_next">&laquo;</a>]
+#else
+    [-]
+#end if
+</body></html>
+""")
+
+template_html_page = Template(
+    template_html_header,
+    template_html_body_top,
+    """
+    #for $mark in $marks
+        <p>${mark.date} [<a href="${mark.href_mark}">&#9734;</a>]
+          <a href="${mark.href_mark_url}">${mark.title}</a>
+          #if ${mark.note}
+              <br />${mark.note}
+          #end if
+          <br />
+          #for $tag in ${mark.tags}
+              #if ${tag.href_tag} and ${tag.name_tag}
+                  <a href="${tag.href_tag}">${tag.name_tag}</a>
+              #else
+                  -
+              #end if
+          #end for
+          #if not ${mark.tags}
+          -
+          #end if
+        </p>
+    #end for
+    """,
+    template_html_body_bottom)
+
+template_html_mark = Template(
+    template_html_header,
+    template_html_body_top,
+    """
+    #for $mark in $marks
+        <p>${mark.date} [<a href="${mark.href_mark}">&#9734;</a>]
+          <a href="${mark.href_mark_url}">${mark.title}</a>
+          #if ${mark.note}
+              <br />${mark.note}
+          #end if
+          <br />
+          #for $tag in ${mark.tags}
+              #if ${tag.href_tag} and ${tag.name_tag}
+                  <a href="${tag.href_tag}">${tag.name_tag}</a>
+              #else
+                  -
+              #end if
+          #end for
+          #if not ${mark.tags}
+          -
+          #end if
+        </p>
+        <p>
+        [<a href="$href_edit">edit</a>]
+        </p>
+    #end for
+    """,
+    template_html_body_bottom)
+
+template_html_tags = Template(
+    template_html_header,
+    template_html_body_top,
+    """
+    <p>
+    #for $tag in $tags
+       <a href="${tag.href_tag}">${tag.name_tag}</a> ${tag.num_tagged}<br />
+    #end for
+    </p>
+    <hr />
+    </body></html>
+    """)
+
+template_html_delete = Template(
+    template_html_header,
+    template_html_body_top,
+    """
+    <p>Deleted.</p>
+    </body></html>
+    """)
+
+template_html_login = Template(
+    template_html_header,
+    """
+    <form action="$action_login" method="POST">
+      $username:
+      <input name=password type=password size=32 maxlength=32 />
+      <input name=OK type=submit value="Enter" />
+      #if $savedref
+          <input name=savedref type=hidden value="$savedref" />
+      #end if
+    </form>
+    </body>
+    </html>
+    """)
+
+template_html_redirect = Template(
+    template_html_header,
+    """
+    <p><a href="$href_redir">See Other</a></p>
+    </body></html>
+    """)
+
+template_html_editform = Template(
+    template_html_header,
+    template_html_body_top,
+    """
+    <script src="$href_editjs"></script>
+    <form action="$action_edit" method="POST" name="editform">
+     <table>
+     <tr>
+      <td>Title
+      <td>
+        <input name="title" type="text" size=80 maxlength=1023 id="$id_title"
+               value="${val_title:-}" />
+        #if not $mark
+        <input name="preload" value="Preload" type="button" id="$id_button"
+         onclick="preload_title('$href_fetch', '$id_title', '$id_button');" />
+        #end if
+     </tr><tr>
+      <td>URL
+      <td><input name="href" type="text" size=95 maxlength=1023
+           value="${val_href:-}"/>
+     </tr><tr>
+      <td>tags
+      <td><input name="tags" type="text" size=95 maxlength=1023
+           value="${val_tags:-}"/>
+     </tr><tr>
+      <td>Extra
+      <td><input name="extra" type="text" size=95 maxlength=1023
+           value="${val_note:-}"/>
+     </tr><tr>
+      <td colspan=2><input name=action type=submit value="Save" />
+     </tr></table>
+    </form>
+
+    #if ${action_delete:-}
+    <p>or</p>
+    <form action="$action_delete" method="POST">
+      <input name=mark type=hidden value="${mark.key}" />
+      <input name=action type=submit value="Delete" />
+      (There is no undo.)
+    </form>
+    #end if
+    """)
+
+template_simple_output = Template("""$output""")
