@@ -8,6 +8,7 @@
 import urllib
 import urlparse
 
+
 class AppError(Exception):
     pass
 class App400Error(Exception):
@@ -22,6 +23,7 @@ class AppPostError(Exception):
     pass
 class AppGetPostError(Exception):
     pass
+
 
 def safestr(u):
     if isinstance(u, unicode):
@@ -44,6 +46,32 @@ def escapeURL(s):
     s = s.replace('<', '%3C')
     s = s.replace('>', '%3E')
     return s
+
+html_escape_table = {
+    ">": "&gt;",
+    "<": "&lt;",
+    "&": "&amp;",
+    '"': "&quot;",
+    "'": "&apos;",
+    "\\": "&#92;",
+    }
+
+def escapeHTML(text):
+    """Escape strings to be safe for use anywhere in HTML
+
+    Should be used for escaping any user-supplied strings values before
+    outputting them in HTML. The output is safe to use HTML running text and
+    within HTML attributes (e.g. value="%s").
+
+    Escaped chars:
+      < and >   HTML tags
+      &         HTML entities
+      " and '   Allow use within HTML tag attributes
+      \\        Shouldn't actually be necessary, but better safe than sorry
+    """
+    # performance idea: compare with cgi.escape-like implementation
+    return "".join(html_escape_table.get(c,c) for c in text)
+
 
 class Context:
     def __init__(self, pfx, user, base, method, path, query, pinput, coos):
@@ -74,11 +102,13 @@ class Context:
     def create_jsondict(self):
         userpath = self.prefix+'/'+self.user['name']
 
+        # XXX Decide if keep unused: name_user, href_user
         jsondict = {"name_user": self.user["name"],
                     "href_user": userpath,
                     "href_tags": "%s/tags" % userpath,
                     "href_new": "%s/new" % userpath,
                    }
+
         if self.flogin:
             jsondict["href_export"]= userpath + '/export.xml'
             jsondict["href_login"] = None
@@ -87,6 +117,10 @@ class Context:
             jsondict["href_login"] = "%s/login" % userpath
             if self.path and self.path != "login" and self.path != "edit":
                 jsondict["href_login"] += '?savedref=%s' % self.path
+
+        userstr = '<a href="%s/">%s</a>' % (userpath, self.user['name'])
+        jsondict['_main_path'] = userstr
+
         return jsondict
 
     def _parse_args(self, args):
@@ -108,5 +142,6 @@ class Context:
         if self._pinput_args is None:
             self._pinput_args = self._parse_args(self._pinput)
         return self._pinput_args.get(argname, None)
+
 
 import main, tagbase

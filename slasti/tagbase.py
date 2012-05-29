@@ -269,6 +269,7 @@ class TagMark:
 
         mark_url = '%s/mark.%d.%02d' % (path_prefix, self.stamp0, self.stamp1)
         ts = time.gmtime(self.stamp0)
+        # XXX common constructor with create_jsondict, please
         jsondict = {
             "date": unicode(time.strftime("%Y-%m-%d", ts)),
             "href_mark": mark_url,
@@ -288,6 +289,8 @@ class TagMark:
                  "name_tag": tag,
                 })
         jsondict["tags_str"] = ' '.join(tags_str)
+
+        jsondict['_main_path'] = "MOO"
 
         return jsondict
 
