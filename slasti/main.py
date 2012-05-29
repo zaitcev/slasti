@@ -10,6 +10,7 @@ import time
 import urllib
 import urlparse
 import base64
+import cgi
 import os
 import hashlib
 import httplib
@@ -18,13 +19,16 @@ import sgmllib
 
 from slasti import AppError, App400Error, AppLoginError, App404Error
 from slasti import AppGetError, AppGetPostError
+from slasti import escapeHTML
+from slasti import Context
 import slasti
 import tagbase
 from template import Template
 
 PAGESZ = 25
 
-WHITESTAR = u"\u2606"
+BLACKSTAR = u"\u2605"     # "&#9733;"
+WHITESTAR = u"\u2606"     # "&#9734;"
 
 def page_back(mark):
     mark = mark.pred()
@@ -39,6 +43,12 @@ def page_back(mark):
         mark = m
         n += 1
     return mark
+
+def mark_anchor_html(mark, path, text):
+    if mark == None:
+        return '[-]'
+    (stamp0, stamp1) = mark.key()
+    return '[<a href="%s/mark.%d.%02d">%s</a>]' % (path, stamp0, stamp1, text)
 
 def page_url_from_mark(mark, path):
     if mark is None:
@@ -69,16 +79,17 @@ def findmark(mark_str):
 
 def page_any_html(start_response, ctx, mark_top):
     userpath = ctx.prefix+'/'+ctx.user['name']
-    what = mark_top.tag()
 
+    jsondict = ctx.create_jsondict()
+
+    what = mark_top.tag()
     if what:
         path = userpath + '/' + what
+        jsondict['_main_path'] = jsondict['_main_path']+' / '+escapeHTML(what)+'/'
     else:
         path = userpath
+        jsondict['_main_path'] = jsondict['_main_path']+' / '+BLACKSTAR
 
-    start_response("200 OK", [('Content-type', 'text/html; charset=utf-8')])
-    jsondict = ctx.create_jsondict()
-    jsondict["current_tag"] = what
     jsondict["marks"] = []
 
     mark = mark_top
@@ -97,6 +108,8 @@ def page_any_html(start_response, ctx, mark_top):
             "href_page_this": page_url_from_mark(mark_top, path),
             "href_page_next": page_url_from_mark(mark_next, path),
             })
+
+    start_response("200 OK", [('Content-type', 'text/html; charset=utf-8')])
     return [template_html_page.substitute(jsondict)]
 
 def page_mark_html(start_response, ctx, stamp0, stamp1):
@@ -123,8 +136,8 @@ def page_empty_html(start_response, ctx):
 
     start_response("200 OK", [('Content-type', 'text/html; charset=utf-8')])
     jsondict = ctx.create_jsondict()
+    jsondict['_main_path'] = jsondict['_main_path']+' / [-]'
     jsondict.update({
-                "current_tag": "[-]",
                 "marks": [],
                })
     return [template_html_page.substitute(jsondict)]
@@ -207,6 +220,7 @@ def fetch_get(start_response, ctx):
     title = fetch_parse(body)
 
     start_response("200 OK", [('Content-type', 'text/plain; charset=utf-8')])
+    # XXX Ewww, why substitute here? Just safe it out. Compare with 1.2.
     jsondict = { "output": '%s\r\n' % title }
     return [template_simple_output.substitute(jsondict)]
 
@@ -225,6 +239,10 @@ def mark_post(start_response, ctx, mark):
         raise App404Error("Mark not found: "+str(stamp0)+"."+str(stamp1))
     return mark_get(start_response, ctx, mark, stamp0)
 
+# XXX regressed HTML
+# - uses same format as page (not a bad idea - old format was too bland,
+#   but needs something to differentiate them at a glance).
+# - bottom screwed up, goose feet left for right; blackstar instead of white
 def mark_get(start_response, ctx, mark, stamp0):
     path = ctx.prefix+'/'+ctx.user['name']
 
@@ -315,7 +333,7 @@ def full_tag_html(start_response, ctx):
     userpath = ctx.prefix + '/' + ctx.user['name']
     start_response("200 OK", [('Content-type', 'text/html; charset=utf-8')])
     jsondict = ctx.create_jsondict()
-    jsondict["current_tag"] = "tags"
+    jsondict['_main_path'] = jsondict['_main_path']+' / tags'
     jsondict["tags"] = []
     for tag in ctx.base.tagcurs():
         ref = tag.key()
@@ -332,6 +350,7 @@ def login_form(start_response, ctx):
     savedref = ctx.get_query_arg("savedref")
 
     start_response("200 OK", [('Content-type', 'text/html; charset=utf-8')])
+    # XXX Common constructor with jsondict_create
     jsondict = {
             "username": username,
             "action_login": "%s/login" % userpath,
@@ -436,13 +455,13 @@ def new_form(start_response, ctx):
     href = ctx.get_query_arg('href')
 
     jsondict = ctx.create_jsondict()
+    jsondict['_main_path'] = jsondict['_main_path']+' / ['+WHITESTAR+']'
     jsondict.update({
             "id_title": "title1",
             "id_button": "button1",
             "href_editjs": ctx.prefix + '/edit.js',
             "href_fetch": userpath + '/fetchtitle',
             "mark": None,
-            "current_tag": "[" + WHITESTAR + "]",
             "action_edit": userpath + '/edit',
             "val_title": title,
             "val_href": href,
@@ -459,14 +478,14 @@ def edit_form(start_response, ctx):
         raise App400Error("not found: "+str(stamp0)+"."+str(stamp1))
 
     jsondict = ctx.create_jsondict()
+    starref = mark_anchor_html(mark, userpath, WHITESTAR)
+    jsondict['_main_path'] = jsondict['_main_path']+' / '+starref
     jsondict.update({
         "id_title": "title1",
         "id_button": "button1",
         "href_editjs": ctx.prefix + '/edit.js',
         "href_fetch": userpath + '/fetchtitle',
         "mark": mark.to_jsondict(userpath),
-        "current_tag": WHITESTAR,
-        "href_current_tag": '%s/mark.%d.%02d' % (userpath, stamp0, stamp1),
         "action_edit": "%s/mark.%d.%02d" % (userpath, stamp0, stamp1),
         "action_delete": userpath + '/delete',
         "val_title": mark.title,
@@ -627,20 +646,7 @@ template_html_body_top = Template("""
  border=0 cellpadding=1 cellspacing=0>
 <tr valign="top">
     <td align="left">
-        <h2 style="margin-bottom:0">
-            <a href="$href_user">$name_user</a> /
-            #if ${href_current_tag:-}
-                <a href="$href_current_tag">
-            #end if
-            #if ${current_tag:-}
-                $current_tag
-            #else
-                &#9733;
-            #end if
-            #if ${href_current_tag:-}
-                </a>
-            #end if
-        </h2>
+        <h2 style="margin-bottom:0"> $_main_path </h2>
     </td>
     <td align="right">
         #if $href_login
@@ -817,6 +823,8 @@ template_html_editform = Template(
       (There is no undo.)
     </form>
     #end if
+
+    <hr />
     """)
 
 template_simple_output = Template("""$output""")

@@ -1,4 +1,4 @@
-Slasti version 1.90 (post-Christian checkpoint)
+Slasti version 1.90.dev
 Unfortunately, Oishii was taken, so Slasti it is. It's good to be trilingual.
 
 TODO:
@@ -8,6 +8,8 @@ TODO:
  - localizations
  - tests (Christan's main() in template.py lacked verification)
  - template docs for 2.0
+   - macro variables list - document starting with underscore
+   - parse and beautify devel notes
 
 fixup TODO for templates:
  - http://www.zaitcev.us/slasti/tester/login?savedref=%E3%82%A2%E3%83%8B%E3%83%BB%E3%83%8E%E3%83%BC%E3%83%88/
@@ -15,8 +17,8 @@ fixup TODO for templates:
    UnicodeEncodeError: 'ascii' codec can't encode characters in position 0-5: ordinal not in range(128)
  - Hitting "Preload" ends with same, in fetch_get()
    Maybe just drop templating for the helper.
- - remove flooding print from template.py
- - BLACKSTAR for individual marks in the path
+ - remove flooding print from template.py - 'str found:' etc. Kill all print.
+ - rename "jsondict" into something sensible
 
 zaitcev@kotori.zaitcev.us
 
@@ -70,5 +72,6 @@ Solution for the output encoding problem:
    unicode and is safe to use within attributes.
  * Everything else should end up in jsondict as unescaped unicode, escaping and
    encoding is handled in the templating engine.
+   -- this breaks for variables that contain HTML, they start with '_'.
  * Template().substitute() returns bytes. Don't mess with that, just return it
    to the wsgi server.
