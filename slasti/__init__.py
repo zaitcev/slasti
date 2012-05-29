@@ -118,12 +118,6 @@ class Context:
             if self.path and self.path != "login" and self.path != "edit":
                 jsondict["href_login"] += '?savedref=%s' % self.path
 
-        # root:  user/*
-        # mark:  user      (traditional, no slash)
-        # tags:  user/tags
-        # Tag:   user/Tag/
-        # new:   user/[w]  (whitestar)
-        # edit:  user/[w]  (whitestar links back)
         userstr = '<a href="%s/">%s</a>' % (userpath, self.user['name'])
         jsondict['_main_path'] = userstr
 
