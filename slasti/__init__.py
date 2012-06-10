@@ -119,6 +119,10 @@ class Context:
         userstr = '<a href="%s/">%s</a>' % (userpath, self.user['name'])
         jsondict['_main_path'] = userstr
 
+        jsondict['_page_prev'] = "-"
+        jsondict['_page_this'] = "-"
+        jsondict['_page_next'] = "-"
+
         return jsondict
 
     def _parse_args(self, args):
