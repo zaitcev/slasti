@@ -38,7 +38,6 @@ SSL-enabled service, then always use https:// schema.
 = pre-loading from XML
 
 cd /var/www/slasti
-mv user user~	# in case
 mkdir user
 python /home/admin/git/slasti/del2sla.py user /home/admin/tmp/export-user.xml
 chown -R apache user
