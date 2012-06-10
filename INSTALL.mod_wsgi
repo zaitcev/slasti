@@ -22,7 +22,8 @@ mkdir /var/www/slasti/zaitcev
 chown apache /var/www/slasti/zaitcev
 
 # Optionally, pre-populate user's database.
-python del2sla.py /var/www/slasti/zaitcev z-delicious.xml
+python del2sla.py /var/www/slasti/zaitcev export.xml
+chown -R apache /var/www/slasti/zaitcev
 
 # You might also want add/edit robots.txt, at least prohibit /login
 # (obviously, it adds no extra security, but helps decluttering logs).
