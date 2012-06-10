@@ -34,3 +34,11 @@ currently it is not SSL-aware. There will be no bugging to use SSL
 for logins, and no explicit "secure mode". The best approach is still
 being searched. Meanwhile, configure Apache like you would for any
 SSL-enabled service, then always use https:// schema.
+
+= pre-loading from XML
+
+cd /var/www/slasti
+mv user user~	# in case
+mkdir user
+chown apache user
+python /home/admin/git/slasti/del2sla.py user /home/admin/tmp/export-user.xml
