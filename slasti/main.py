@@ -19,7 +19,6 @@ import sgmllib
 
 from slasti import AppError, App400Error, AppLoginError, App404Error
 from slasti import AppGetError, AppGetPostError
-from slasti import escapeHTML
 from slasti import Context
 import slasti
 import tagbase
@@ -44,17 +43,17 @@ def page_back(mark):
         n += 1
     return mark
 
+def page_anchor_html(mark, path, text):
+    if mark == None:
+        return '-'
+    (stamp0, stamp1) = mark.key()
+    return '<a href="%s/page.%d.%02d">%s</a>' % (path, stamp0, stamp1, text)
+
 def mark_anchor_html(mark, path, text):
     if mark == None:
-        return '[-]'
+        return '-'
     (stamp0, stamp1) = mark.key()
-    return '[<a href="%s/mark.%d.%02d">%s</a>]' % (path, stamp0, stamp1, text)
-
-def page_url_from_mark(mark, path):
-    if mark is None:
-        return None
-    (stamp0, stamp1) = mark.key()
-    return '%s/page.%d.%02d' % (path, stamp0, stamp1)
+    return '<a href="%s/mark.%d.%02d">%s</a>' % (path, stamp0, stamp1, text)
 
 def find_post_args(ctx):
     rdic = {}
@@ -84,8 +83,8 @@ def page_any_html(start_response, ctx, mark_top):
 
     what = mark_top.tag()
     if what:
-        path = userpath + '/' + what
-        jsondict['_main_path'] += ' / '+escapeHTML(what)+'/'
+        path = userpath + '/' + slasti.escapeURL(what)
+        jsondict['_main_path'] += ' / '+slasti.escapeHTML(what)+'/'
     else:
         path = userpath
         jsondict['_main_path'] += ' / '+BLACKSTAR
@@ -104,9 +103,9 @@ def page_any_html(start_response, ctx, mark_top):
         mark = mark_next
 
     jsondict.update({
-            "href_page_prev": page_url_from_mark(page_back(mark_top), path),
-            "href_page_this": page_url_from_mark(mark_top, path),
-            "href_page_next": page_url_from_mark(mark_next, path),
+         "_page_prev": page_anchor_html(page_back(mark_top), path, "&laquo;"),
+         "_page_this": page_anchor_html(mark_top,            path, BLACKSTAR),
+         "_page_next": page_anchor_html(mark_next,           path, "&raquo;")
             })
 
     start_response("200 OK", [('Content-type', 'text/html; charset=utf-8')])
@@ -251,9 +250,9 @@ def mark_get(start_response, ctx, mark, stamp0):
     jsondict.update({
                 "marks": [mark.to_jsondict(path)],
                 "href_edit": mark.get_editpath(path),
-                "href_page_prev": page_url_from_mark(mark.pred(), path),
-                "href_page_this": page_url_from_mark(mark, path),
-                "href_page_next": page_url_from_mark(mark.succ(), path),
+                "_page_prev": mark_anchor_html(mark.pred(), path, "&laquo;"),
+                "_page_this": mark_anchor_html(mark,        path, WHITESTAR),
+                "_page_next": mark_anchor_html(mark.succ(), path, "&raquo;")
                })
     return [template_html_mark.substitute(jsondict)]
 
@@ -662,24 +661,10 @@ template_html_body_top = Template("""
 </tr></table>
 """)
 
-
+# XXX The price of no-#if is &laquo; and &raquo; hardwired in dict. Parameter?
 template_html_body_bottom = Template("""
 <hr />
-#if ${href_page_prev:-}
-    [<a href="$href_page_prev">&laquo;</a>]
-#else
-    [-]
-#end if
-#if ${href_page_this:-}
-    [<a href="$href_page_this">&#9733;</a>]
-#else
-    [-]
-#end if
-#if ${href_page_next:-}
-    [<a href="$href_page_next">&laquo;</a>]
-#else
-    [-]
-#end if
+[$_page_prev][$_page_this][$_page_next]<br />
 </body></html>
 """)
 
@@ -709,6 +694,7 @@ template_html_page = Template(
     """,
     template_html_body_bottom)
 
+# XXX In 1.2 the "[edit] button was only shown if logged in.
 template_html_mark = Template(
     template_html_header,
     template_html_body_top,
