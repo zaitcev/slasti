@@ -85,10 +85,10 @@ def page_any_html(start_response, ctx, mark_top):
     what = mark_top.tag()
     if what:
         path = userpath + '/' + what
-        jsondict['_main_path'] = jsondict['_main_path']+' / '+escapeHTML(what)+'/'
+        jsondict['_main_path'] += ' / '+escapeHTML(what)+'/'
     else:
         path = userpath
-        jsondict['_main_path'] = jsondict['_main_path']+' / '+BLACKSTAR
+        jsondict['_main_path'] += ' / '+BLACKSTAR
 
     jsondict["marks"] = []
 
@@ -136,7 +136,7 @@ def page_empty_html(start_response, ctx):
 
     start_response("200 OK", [('Content-type', 'text/html; charset=utf-8')])
     jsondict = ctx.create_jsondict()
-    jsondict['_main_path'] = jsondict['_main_path']+' / [-]'
+    jsondict['_main_path'] += ' / [-]'
     jsondict.update({
                 "marks": [],
                })
@@ -333,7 +333,7 @@ def full_tag_html(start_response, ctx):
     userpath = ctx.prefix + '/' + ctx.user['name']
     start_response("200 OK", [('Content-type', 'text/html; charset=utf-8')])
     jsondict = ctx.create_jsondict()
-    jsondict['_main_path'] = jsondict['_main_path']+' / tags'
+    jsondict['_main_path'] += ' / tags'
     jsondict["tags"] = []
     for tag in ctx.base.tagcurs():
         ref = tag.key()
@@ -455,7 +455,7 @@ def new_form(start_response, ctx):
     href = ctx.get_query_arg('href')
 
     jsondict = ctx.create_jsondict()
-    jsondict['_main_path'] = jsondict['_main_path']+' / ['+WHITESTAR+']'
+    jsondict['_main_path'] += ' / ['+WHITESTAR+']'
     jsondict.update({
             "id_title": "title1",
             "id_button": "button1",
@@ -478,8 +478,7 @@ def edit_form(start_response, ctx):
         raise App400Error("not found: "+str(stamp0)+"."+str(stamp1))
 
     jsondict = ctx.create_jsondict()
-    starref = mark_anchor_html(mark, userpath, WHITESTAR)
-    jsondict['_main_path'] = jsondict['_main_path']+' / '+starref
+    jsondict['_main_path'] += ' / '+mark_anchor_html(mark, userpath, WHITESTAR)
     jsondict.update({
         "id_title": "title1",
         "id_button": "button1",
