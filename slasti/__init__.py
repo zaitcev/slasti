@@ -102,9 +102,7 @@ class Context:
     def create_jsondict(self):
         userpath = self.prefix+'/'+self.user['name']
 
-        # XXX Decide if keep unused: name_user, href_user
-        jsondict = {"name_user": self.user["name"],
-                    "href_user": userpath,
+        jsondict = {
                     "href_tags": "%s/tags" % userpath,
                     "href_new": "%s/new" % userpath,
                    }
