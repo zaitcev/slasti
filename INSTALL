@@ -40,5 +40,5 @@ SSL-enabled service, then always use https:// schema.
 cd /var/www/slasti
 mv user user~	# in case
 mkdir user
-chown apache user
 python /home/admin/git/slasti/del2sla.py user /home/admin/tmp/export-user.xml
+chown -R apache user
