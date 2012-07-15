@@ -810,6 +810,7 @@ template_html_editform = Template(
     #end if
 
     <hr />
+    </body></html>
     """)
 
 template_simple_output = Template("""$output""")
