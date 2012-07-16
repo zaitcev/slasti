@@ -290,7 +290,7 @@ class TagMark:
                 })
         jsondict["tags_str"] = ' '.join(tags_str)
 
-        jsondict['_main_path'] = "MOO"
+        jsondict['_main_path'] = u"MOO"
 
         return jsondict
 

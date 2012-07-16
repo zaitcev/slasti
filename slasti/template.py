@@ -232,15 +232,18 @@ class TemplateNode(TemplateNodeBase):
 
 class TemplateNodeElem(TemplateNodeBase):
     def __init__(self, elem):
-        super(TemplateNode, self).__init__()
-        self.elem = elem
+        super(TemplateNodeElem, self).__init__()
+        self.children.append(str(elem))
 
     def substitute(self, d, children=None):
         # forward to template element
-        # a pythonista would probably find a way just use TemplateLoop instance
-        # but there's a bunch of isinstance(TemplateNodeBase), so maybe not
-        elem.substitute(d, .........)
-        .............
+        # ret = self.elem.substitute(d)  <====== will encode(), blows up later
+        # ret = str(self.elem) <=========== no expansion in this
+        if children is None:
+            children = self.children
+        print "Elem subst", self.name, len(children)
+        ret = super(TemplateNodeElem, self).substitute(d, children)
+        return ret
 
 
 class Template:
@@ -270,7 +273,7 @@ class Template:
         stack = [self.template_tree]
 
         for elem in self.template_list:
-            if isinstance(elem, str):
+            if isinstance(elem, str) or isinstance(elem, unicode):
 
                 cursor = 0
                 for m_line in re_directive.finditer(elem):
@@ -351,23 +354,29 @@ class Template:
         self._check_encoding(d)
         return self.template_tree.substitute(DictWrapper(d)).encode("utf-8")
 
-# class TemplateElemLoop:
-#     def __init__(self, loopvar_name, list_name, loop_body):
-#         """
-#         loopvar_name: name of loopvar to be referred in loop_body
-#         list_name: name of list along which to iterate
-#         loop_body: an instance of Template to be looped
-#         """
-#         self.loopvar = loopvar_name
-#         self.listname = list_name
-#         self.body = loop_body
-#
-#     def __str__(self):
-#         return "LOOP(%s,%s,%s)" % (self.loopvar, self.listname, str(self.body))
-#
-#     # Forwarded by our TemplateNodeElem
-#     def substitute(self, d):
-#         # XXX should we clone d to forlist before polluting it with loopvar?
-#         for n in d[self.listname]:
-#             d[self.listvar] = something.........(n)
-#             self.body.substitute(d)
+class TemplateElemLoop:
+    def __init__(self, loopvar_name, list_name, loop_body):
+        """
+        loopvar_name: name of loopvar to be referred in loop_body
+        list_name: name of list along which to iterate
+        loop_body: an instance of Template to be looped
+        """
+        self.loopvar = loopvar_name
+        self.listname = list_name
+        self.body = loop_body
+
+    def __str__(self):
+        return "LOOP(%s,%s,%s)" % (self.loopvar, self.listname, str(self.body))
+
+    # Forwarded by our TemplateNodeElem
+    # XXX no, it's not... due to inversion - Template.substitute must not
+    # be called from a TemplateNode;
+    # rename to Template.substitute_no_encode() ? XXX
+    def substitute(self, d):
+        output = []
+        for n in d[self.listname]:
+            new_d = d._clone()
+            new_d[self.loopvar] = n
+            output.append(self.body.substitute(new_d))
+        # XXX gawd, the joins are everywhere
+        return ''.join(output)
