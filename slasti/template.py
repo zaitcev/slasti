@@ -233,17 +233,15 @@ class TemplateNode(TemplateNodeBase):
 class TemplateNodeElem(TemplateNodeBase):
     def __init__(self, elem):
         super(TemplateNodeElem, self).__init__()
-        self.children.append(str(elem))
+        self.elem = elem
 
     def substitute(self, d, children=None):
         # forward to template element
-        # ret = self.elem.substitute(d)  <====== will encode(), blows up later
-        # ret = str(self.elem) <=========== no expansion in this
-        if children is None:
-            children = self.children
-        print "Elem subst", self.name, len(children)
-        ret = super(TemplateNodeElem, self).substitute(d, children)
-        return ret
+        if children:
+            print "Elem subst, children", self.name, len(children)
+            return super(TemplateNodeElem, self).substitute(d, children)
+        print "Elem subst, tree", self.name
+        return self.elem.template_tree.substitute(DictWrapper(d))
 
 
 class Template:
