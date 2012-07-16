@@ -22,7 +22,7 @@ from slasti import AppGetError, AppGetPostError
 from slasti import Context
 import slasti
 import tagbase
-from template import Template      # TemplateElemLoop
+from template import Template, TemplateElemLoop
 
 PAGESZ = 25
 
@@ -724,34 +724,21 @@ template_html_mark = Template(
     """,
     template_html_body_bottom)
 
-# # for $tag in tags
-# template_html_tags_1 = Template(
-# '  <a href="${tag.href_tag}">${tag.name_tag}</a> ${tag.num_tagged}<br />'
-# )
-#
-# template_html_tags = Template(
-#     template_html_header,
-#     template_html_body_top,
-#     """
-# <p>
-#     """,
-#     TemplateElemLoop('tag','tags',template_html_tags_1),
-#     """
-# </p>
-# <hr />
-# </body></html>
-#     """)
+template_html_tags_1 = Template(
+'  <a href="${tag.href_tag}">${tag.name_tag}</a> ${tag.num_tagged}<br />\r\n'
+)
+
 template_html_tags = Template(
     template_html_header,
     template_html_body_top,
     """
-    <p>
-    #for $tag in $tags
-       <a href="${tag.href_tag}">${tag.name_tag}</a> ${tag.num_tagged}<br />
-    #end for
-    </p>
-    <hr />
-    </body></html>
+<p>
+    """,
+    TemplateElemLoop('tag','tags',template_html_tags_1),
+    """
+</p>
+<hr />
+</body></html>
     """)
 
 template_html_delete = Template(

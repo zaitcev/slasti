@@ -9,7 +9,7 @@ TODO:
  - tests (Christan's main() in template.py lacked verification)
  - template docs for 2.0
    - macro variables list - document starting with underscore
-   - parse and beautify devel notes
+   - parse and beautify devel notes (again)
  - make .substitute to return a list-of-strings; million useless .join now
 
 fixup TODO for templates:
@@ -34,14 +34,12 @@ zaitcev@kotori.zaitcev.us
 ================================================================
 Slasti development notes
 
-Character encoding and HTML/URL escape strategy:
-As those two are pretty related, they presumably should be handled together in
-the same place.
 Internally, all data strings are unicode (there may be some byte strings
 for things like HTTP's "200 OK" and header names, but never for data).
 Decoding/encoding should be done "on the border" or very closeby.
 
 Decoding raw bytes on input:
+
  * ctx.path is alrady unicode, this is handled by slasti.wsgi.
  * pinput and query strings should be obtained via ctx.get_pinput_arg() and
    ctx.get_query_arg() respectively. They handle encoding issues.
@@ -51,6 +49,7 @@ stores tags base64 encoded as filenames, while content of bookmarks is saved in
 files encoded as utf-8.
 
 Encoding unicode strings on output:
+
 Can either be done in Template.substitute() (as currently) or in slasti.wsgi.
 Neither is particularly tricky. What's difficult, however, is proper escaping.
 
@@ -74,5 +73,6 @@ Solution for the output encoding problem:
  * Everything else should end up in jsondict as unescaped unicode, escaping and
    encoding is handled in the templating engine.
    -- this breaks for variables that contain HTML, they start with '_'.
- * Template().substitute() returns bytes. Don't mess with that, just return it
-   to the wsgi server.
+ * Template().substitute() returns bytes. Attempt to process it causes
+   UnicodeDecodeError, but we just return it to the wsgi server.
+   In order to make a substitute to call substitute, we created substitute_2.

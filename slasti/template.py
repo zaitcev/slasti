@@ -238,10 +238,10 @@ class TemplateNodeElem(TemplateNodeBase):
     def substitute(self, d, children=None):
         # forward to template element
         if children:
+            # never happens?
             print "Elem subst, children", self.name, len(children)
             return super(TemplateNodeElem, self).substitute(d, children)
-        print "Elem subst, tree", self.name
-        return self.elem.template_tree.substitute(DictWrapper(d))
+        return self.elem.substitute_2(d)
 
 
 class Template:
@@ -348,6 +348,9 @@ class Template:
             return
         print "->", type(d), repr(d)
 
+    def substitute_2(self, d):
+        return self.template_tree.substitute(DictWrapper(d))
+
     def substitute(self, d):
         self._check_encoding(d)
         return self.template_tree.substitute(DictWrapper(d)).encode("utf-8")
@@ -370,11 +373,15 @@ class TemplateElemLoop:
     # XXX no, it's not... due to inversion - Template.substitute must not
     # be called from a TemplateNode;
     # rename to Template.substitute_no_encode() ? XXX
-    def substitute(self, d):
+    def substitute_2(self, d):
         output = []
         for n in d[self.listname]:
             new_d = d._clone()
             new_d[self.loopvar] = n
-            output.append(self.body.substitute(new_d))
-        # XXX gawd, the joins are everywhere
+            output.append(self.body.substitute_2(new_d))
         return ''.join(output)
+
+    def substitute(self, d):
+        # never happens?
+        print "Legacy substitute of a loop"
+        return self.substitute_2(d)
