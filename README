@@ -10,6 +10,7 @@ TODO:
  - template docs for 2.0
    - macro variables list - document starting with underscore
    - parse and beautify devel notes
+ - make .substitute to return a list-of-strings; million useless .join now
 
 fixup TODO for templates:
  - http://www.zaitcev.us/slasti/tester/login?savedref=%E3%82%A2%E3%83%8B%E3%83%BB%E3%83%8E%E3%83%BC%E3%83%88/

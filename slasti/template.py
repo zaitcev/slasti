@@ -230,13 +230,27 @@ class TemplateNode(TemplateNodeBase):
         raise NotImplementedError("Control directive handler missing")
 
 
+class TemplateNodeElem(TemplateNodeBase):
+    def __init__(self, elem):
+        super(TemplateNodeElem, self).__init__()
+        self.elem = elem
+
+    def substitute(self, d, children=None):
+        # forward to template element
+        if children:
+            print "Elem subst, children", self.name, len(children)
+            return super(TemplateNodeElem, self).substitute(d, children)
+        print "Elem subst, tree", self.name
+        return self.elem.template_tree.substitute(DictWrapper(d))
+
+
 class Template:
     def __init__(self, *args):
-        self.template_str = ' '.join([str(arg) for arg in args])
+        self.template_list = args
         self._build_template_tree()
 
     def __str__(self):
-        return self.template_str
+        return ' '.join([str(arg) for arg in self.template_list])
 
     def _build_template_tree(self):
         def mk_re(s):
@@ -253,62 +267,71 @@ class Template:
                               (?P<forlist>.+?)$"""),
         }
 
-        cursor = 0
         self.template_tree = TemplateNodeRoot()
         stack = [self.template_tree]
-        for m_line in re_directive.finditer(self.template_str):
-            stack[-1].children.append(self.template_str[cursor:m_line.start()])
-            cursor = m_line.end()
 
-            cseq = m_line.group("directive")
-            cmd = [key for key in directives if cseq.startswith('#'+key)]
-            if not cmd:
-                raise TemplateError(m_line, "Unknown syntax: " + cseq)
+        for elem in self.template_list:
+            if isinstance(elem, str) or isinstance(elem, unicode):
 
-            cmd = cmd[0]
+                cursor = 0
+                for m_line in re_directive.finditer(elem):
+                    stack[-1].children.append(elem[cursor:m_line.start()])
+                    cursor = m_line.end()
 
-            # Match template_str here, with a start_position argument
-            # This keeps the whole template string alive in m_cmd.string
-            # Important for showing line/column numbers on syntax errors
-            # DO NOT optimize to directives[cmd].match(cseq)!
-            m_cmd = directives[cmd].match(self.template_str,
+                    cseq = m_line.group("directive")
+                    cmd = [key for key in directives if cseq.startswith('#'+key)]
+                    if not cmd:
+                        raise TemplateError(m_line, "Unknown syntax: " + cseq)
+
+                    cmd = cmd[0]
+
+                    # Match template_str here, with a start_position argument
+                    # This keeps the whole template string alive in m_cmd.string
+                    # Important for showing line/column numbers on syntax errors
+                    # DO NOT optimize to directives[cmd].match(cseq)!
+                    # XXX Except we don't have template_str anymore.
+                    #   so the error line needs to include the template name
+                    m_cmd = directives[cmd].match(elem,
                                           pos=m_line.start("directive"))
-            if not m_cmd:
-                raise TemplateError(m_line,
+                    if not m_cmd:
+                        raise TemplateError(m_line,
                                     "Invalid %s clause: %s" % (cmd, cseq))
 
-            if cmd == "if":
-                sub = TemplateNode(m_cmd)
-                stack[-1].children.append(sub)
-                stack.append(sub)
-            elif cmd == "for":
-                sub = TemplateNode(m_cmd)
-                stack[-1].children.append(sub)
-                stack.append(sub)
-            elif cmd == "else":
-                if stack[-1].name != "if":
-                    raise TemplateError(m_line, "Else not within if: " + cseq)
-                stack[-1].children.append(TemplateNode(m_cmd))
-            elif cmd == "end":
-                endof = m_cmd.group("endof")
-                if endof not in set(["for", "if"]):
-                    raise TemplateError(m_line, "Unknown end tag: " + cseq)
-                if endof != stack[-1].name:
-                    raise TemplateError(m_line, "End tag not matched: " + cseq)
-                subtemplate = stack.pop()
-                subtemplate.set_end(m_cmd)
+                    if cmd == "if":
+                        sub = TemplateNode(m_cmd)
+                        stack[-1].children.append(sub)
+                        stack.append(sub)
+                    elif cmd == "for":
+                        sub = TemplateNode(m_cmd)
+                        stack[-1].children.append(sub)
+                        stack.append(sub)
+                    elif cmd == "else":
+                        if stack[-1].name != "if":
+                            raise TemplateError(m_line, "Else not within if: " + cseq)
+                        stack[-1].children.append(TemplateNode(m_cmd))
+                    elif cmd == "end":
+                        endof = m_cmd.group("endof")
+                        if endof not in set(["for", "if"]):
+                            raise TemplateError(m_line, "Unknown end tag: " + cseq)
+                        if endof != stack[-1].name:
+                            raise TemplateError(m_line, "End tag not matched: " + cseq)
+                        subtemplate = stack.pop()
+                        subtemplate.set_end(m_cmd)
+                    else:
+                        # A syntax regex was added above but is not actually handled
+                        raise NotImplementedError("Syntax handler missing")
+
+                if cursor < len(elem):
+                    stack[-1].children.append(elem[cursor:])
+
+                if len(stack) != 1:
+                    m = re.search('$', elem)
+                    raise TemplateError(m,
+                            "Open %s clause at end of file" % stack[-1].name)
+
             else:
-                # A syntax regex was added above but is not actually handled
-                raise NotImplementedError("Syntax handler missing")
-
-        if cursor < len(self.template_str):
-            stack[-1].children.append(self.template_str[cursor:])
-            cursor = len(self.template_str)
-
-        if len(stack) != 1:
-            m = re.search('$', self.template_str)
-            raise TemplateError(m,
-                    "Open %s clause at end of file" % stack[-1].name)
+                sub = TemplateNodeElem(elem)
+                stack[-1].children.append(sub)
 
     def _check_encoding(self, d):
         if isinstance(d, dict):
@@ -328,3 +351,30 @@ class Template:
     def substitute(self, d):
         self._check_encoding(d)
         return self.template_tree.substitute(DictWrapper(d)).encode("utf-8")
+
+class TemplateElemLoop:
+    def __init__(self, loopvar_name, list_name, loop_body):
+        """
+        loopvar_name: name of loopvar to be referred in loop_body
+        list_name: name of list along which to iterate
+        loop_body: an instance of Template to be looped
+        """
+        self.loopvar = loopvar_name
+        self.listname = list_name
+        self.body = loop_body
+
+    def __str__(self):
+        return "LOOP(%s,%s,%s)" % (self.loopvar, self.listname, str(self.body))
+
+    # Forwarded by our TemplateNodeElem
+    # XXX no, it's not... due to inversion - Template.substitute must not
+    # be called from a TemplateNode;
+    # rename to Template.substitute_no_encode() ? XXX
+    def substitute(self, d):
+        output = []
+        for n in d[self.listname]:
+            new_d = d._clone()
+            new_d[self.loopvar] = n
+            output.append(self.body.substitute(new_d))
+        # XXX gawd, the joins are everywhere
+        return ''.join(output)
