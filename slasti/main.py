@@ -664,30 +664,31 @@ template_html_body_bottom = Template("""
 </body></html>
 """)
 
+template_html_tag = Template(
+' <a href="${tag.href_tag}">${tag.name_tag}</a>'
+)
+
+template_html_pagemark = Template("""
+<p>${mark.date} [<a href="${mark.href_mark}">&#9734;</a>]
+   <a href="${mark.href_mark_url}">${mark.title}</a>
+   #if ${mark.note}
+      <br />${mark.note}
+   #end if
+   <br />
+""",
+    TemplateElemLoop('tag','mark.tags',template_html_tag),
+"""
+   #if not ${mark.tags}
+      -
+   #end if
+   </p>
+"""
+)
+
 template_html_page = Template(
     template_html_header,
     template_html_body_top,
-    """
-    #for $mark in $marks
-        <p>${mark.date} [<a href="${mark.href_mark}">&#9734;</a>]
-          <a href="${mark.href_mark_url}">${mark.title}</a>
-          #if ${mark.note}
-              <br />${mark.note}
-          #end if
-          <br />
-          #for $tag in ${mark.tags}
-              #if ${tag.href_tag} and ${tag.name_tag}
-                  <a href="${tag.href_tag}">${tag.name_tag}</a>
-              #else
-                  -
-              #end if
-          #end for
-          #if not ${mark.tags}
-          -
-          #end if
-        </p>
-    #end for
-    """,
+    TemplateElemLoop('mark','marks',template_html_pagemark),
     template_html_body_bottom)
 
 # XXX In 1.2 the "[edit] button was only shown if logged in.
@@ -701,13 +702,9 @@ template_html_mark = Template(
               <br />${mark.note}
           #end if
           <br />
-          #for $tag in ${mark.tags}
-              #if ${tag.href_tag} and ${tag.name_tag}
-                  <a href="${tag.href_tag}">${tag.name_tag}</a>
-              #else
-                  -
-              #end if
-          #end for
+    """,
+          TemplateElemLoop('tag','mark.tags',template_html_tag),
+    """
           #if not ${mark.tags}
           -
           #end if
@@ -725,9 +722,7 @@ template_html_tags_1 = Template(
 template_html_tags = Template(
     template_html_header,
     template_html_body_top,
-    """
-<p>
-    """,
+    '<p>\r\n',
     TemplateElemLoop('tag','tags',template_html_tags_1),
     """
 </p>

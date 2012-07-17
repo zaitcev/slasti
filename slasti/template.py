@@ -194,16 +194,7 @@ class TemplateNode(TemplateNodeBase):
         if children is None:
             children = self.children
 
-        if self.name == "for":
-            output = []
-            forlist = self._eval_template_code(self.dict["forlist"], d)
-            for loopvalue in forlist:
-                new_d = d._clone()
-                new_d[self.dict["loopvar"]] = loopvalue
-                output.append(super(TemplateNode, self).substitute(new_d))
-            return ''.join(output)
-
-        elif self.name == "if":
+        if self.name == "if":
             # Split the children into if/else clauses (if else is present)
             else_marker = [x for x in children
                              if isinstance(x, TemplateNodeBase) and
@@ -262,9 +253,6 @@ class Template:
             "if":   mk_re(r"""\#(?P<name>if)\s+(?P<condition>.+?)\s*$"""),
             "else": mk_re(r"""\#(?P<name>else)\s*$"""),
             "end":  mk_re(r"""\#(?P<name>end)\s+(?P<endof>if|for)\s*$"""),
-            "for":  mk_re(r"""\#(?P<name>for)\s+
-                              \$(?P<loopvar>\w+) \s+in\s+
-                              (?P<forlist>.+?)$"""),
         }
 
         self.template_tree = TemplateNodeRoot()
@@ -370,13 +358,11 @@ class TemplateElemLoop:
         return "LOOP(%s,%s,%s)" % (self.loopvar, self.listname, str(self.body))
 
     # Forwarded by our TemplateNodeElem
-    # XXX no, it's not... due to inversion - Template.substitute must not
-    # be called from a TemplateNode;
-    # rename to Template.substitute_no_encode() ? XXX
     def substitute_2(self, d):
         output = []
         for n in d[self.listname]:
-            new_d = d._clone()
+            new_d = {}
+            new_d.update(d.dict)
             new_d[self.loopvar] = n
             output.append(self.body.substitute_2(new_d))
         return ''.join(output)
