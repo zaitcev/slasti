@@ -238,17 +238,13 @@ def mark_post(start_response, ctx, mark):
         raise App404Error("Mark not found: "+str(stamp0)+"."+str(stamp1))
     return mark_get(start_response, ctx, mark, stamp0)
 
-# XXX regressed HTML
-# - uses same format as page (not a bad idea - old format was too bland,
-#   but needs something to differentiate them at a glance).
-# - bottom screwed up, goose feet left for right; blackstar instead of white
 def mark_get(start_response, ctx, mark, stamp0):
     path = ctx.prefix+'/'+ctx.user['name']
 
     start_response("200 OK", [('Content-type', 'text/html; charset=utf-8')])
     jsondict = ctx.create_jsondict()
     jsondict.update({
-                "marks": [mark.to_jsondict(path)],
+                "mark": mark.to_jsondict(path),
                 "href_edit": mark.get_editpath(path),
                 "_page_prev": mark_anchor_html(mark.pred(), path, "&laquo;"),
                 "_page_this": mark_anchor_html(mark,        path, WHITESTAR),
@@ -699,8 +695,7 @@ template_html_mark = Template(
     template_html_header,
     template_html_body_top,
     """
-    #for $mark in $marks
-        <p>${mark.date} [<a href="${mark.href_mark}">&#9734;</a>]
+        <p>${mark.date}<br />
           <a href="${mark.href_mark_url}">${mark.title}</a>
           #if ${mark.note}
               <br />${mark.note}
@@ -720,7 +715,6 @@ template_html_mark = Template(
         <p>
         [<a href="$href_edit">edit</a>]
         </p>
-    #end for
     """,
     template_html_body_bottom)
 
