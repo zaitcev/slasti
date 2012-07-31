@@ -116,11 +116,6 @@ class DictWrapper:
     def __setitem__(self, key, value):
         self.dict[key] = value
 
-    def _clone(self):
-        d = {}
-        d.update(self.dict)
-        return DictWrapper(d)
-
 
 class TemplateNodeBase(object):
     """Base class for nodes in the template syntax tree"""
