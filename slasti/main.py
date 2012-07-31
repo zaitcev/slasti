@@ -22,7 +22,7 @@ from slasti import AppGetError, AppGetPostError
 from slasti import Context
 import slasti
 import tagbase
-from template import Template, TemplateElemLoop
+from template import Template, TemplateElemLoop, TemplateElemCond
 
 PAGESZ = 25
 
@@ -643,16 +643,16 @@ template_html_body_top = Template("""
         <h2 style="margin-bottom:0"> $_main_path </h2>
     </td>
     <td align="right">
-        #if $href_login
-            [<a href="$href_login">login</a>]
-        #end if
+""",
+        TemplateElemCond('href_login',
+            ' [<a href="$href_login">login</a>]', None),
+"""
         [<b><a href="$href_tags">tags</a></b>]
         [<a href="$href_new">new</a>]
-        #if $href_export
-            [<a href="$href_export">e</a>]
-        #else
-            [e]
-        #end if
+""",
+        TemplateElemCond('href_export',
+            '[<a href="$href_export">e</a>]', '[e]'),
+"""
     </td>
 </tr></table>
 """)
@@ -671,17 +671,14 @@ template_html_tag = Template(
 template_html_pagemark = Template("""
 <p>${mark.date} [<a href="${mark.href_mark}">&#9734;</a>]
    <a href="${mark.href_mark_url}">${mark.title}</a>
-   #if ${mark.note}
-      <br />${mark.note}
-   #end if
+""",
+    TemplateElemCond('mark.note', '<br />${mark.note}', None),
+"""
    <br />
 """,
     TemplateElemLoop('tag','mark.tags',template_html_tag),
 """
-   #if not ${mark.tags}
-      -
-   #end if
-   </p>
+</p>
 """
 )
 
@@ -698,16 +695,13 @@ template_html_mark = Template(
     """
         <p>${mark.date}<br />
           <a href="${mark.href_mark_url}">${mark.title}</a>
-          #if ${mark.note}
-              <br />${mark.note}
-          #end if
+    """,
+    TemplateElemCond('mark.note', '<br />\r\n    ${mark.note}', None),
+    """
           <br />
     """,
           TemplateElemLoop('tag','mark.tags',template_html_tag),
     """
-          #if not ${mark.tags}
-          -
-          #end if
         </p>
         <p>
         [<a href="$href_edit">edit</a>]
@@ -715,20 +709,20 @@ template_html_mark = Template(
     """,
     template_html_body_bottom)
 
-template_html_tags_1 = Template(
-'  <a href="${tag.href_tag}">${tag.name_tag}</a> ${tag.num_tagged}<br />\r\n'
-)
-
 template_html_tags = Template(
     template_html_header,
     template_html_body_top,
-    '<p>\r\n',
-    TemplateElemLoop('tag','tags',template_html_tags_1),
-    """
+"""
+<p>
+""",
+    TemplateElemLoop('tag','tags',
+        '  <a href="${tag.href_tag}">${tag.name_tag}</a>'+
+        ' ${tag.num_tagged}<br />\r\n'),
+"""
 </p>
 <hr />
 </body></html>
-    """)
+""")
 
 template_html_delete = Template(
     template_html_header,
@@ -745,9 +739,10 @@ template_html_login = Template(
       $username:
       <input name=password type=password size=32 maxlength=32 />
       <input name=OK type=submit value="Enter" />
-      #if $savedref
-          <input name=savedref type=hidden value="$savedref" />
-      #end if
+    """,
+    TemplateElemCond('savedref',
+      '    <input name=savedref type=hidden value="$savedref" />', None),
+    """
     </form>
     </body>
     </html>
@@ -772,10 +767,14 @@ template_html_editform = Template(
       <td>
         <input name="title" type="text" size=80 maxlength=1023 id="$id_title"
                value="${val_title:-}" />
-        #if not $mark
+""",
+        TemplateElemCond('mark', None,
+"""
         <input name="preload" value="Preload" type="button" id="$id_button"
          onclick="preload_title('$href_fetch', '$id_title', '$id_button');" />
-        #end if
+"""
+        ),
+"""
      </tr><tr>
       <td>URL
       <td><input name="href" type="text" size=95 maxlength=1023
@@ -793,15 +792,17 @@ template_html_editform = Template(
      </tr></table>
     </form>
 
-    #if ${action_delete:-}
+""",
+    TemplateElemCond('action_delete',
+    """
     <p>or</p>
     <form action="$action_delete" method="POST">
       <input name=mark type=hidden value="${mark.key}" />
       <input name=action type=submit value="Delete" />
       (There is no undo.)
     </form>
-    #end if
-
+    """, None),
+"""
     <hr />
     </body></html>
     """)

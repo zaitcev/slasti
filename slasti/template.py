@@ -359,10 +359,40 @@ class TemplateElemLoop:
             new_d = {}
             new_d.update(d.dict)
             new_d[self.loopvar] = n
-            output.append(self.body.substitute_2(new_d))
+            if isinstance(self.body, str):
+                o = LaxTemplate(self.body).substitute(DictWrapper(new_d))
+                output.append(o)
+            else:
+                output.append(self.body.substitute_2(new_d))
         return ''.join(output)
 
     def substitute(self, d):
         # never happens?
         print "Legacy substitute of a loop"
+        return self.substitute_2(d)
+
+class TemplateElemCond:
+    def __init__(self, condvar_name, if_body, else_body):
+        self.condvar = condvar_name
+        self.t_body = if_body
+        self.f_body = else_body
+
+    def __str__(self):
+        return "COND(%s,%s,%s)" % (self.condvar,
+                                   str(self.t_body), str(self.f_body))
+
+    def substitute_2(self, d):
+        try:
+            val = d[self.condvar]
+        except KeyError:
+            val = None
+        body = self.t_body if val else self.f_body
+        if not body:
+            return ""
+        if isinstance(body, str):
+            return LaxTemplate(body).substitute(d)
+        return body.substitute_2(d)
+
+    def substitute(self, d):
+        print "Legacy substitute of a conditional"
         return self.substitute_2(d)
