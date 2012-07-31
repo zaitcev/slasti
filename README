@@ -20,6 +20,8 @@ fixup TODO for templates:
    Maybe just drop templating for the helper.
  - remove flooding print from template.py - 'str found:' etc. Kill all print.
  - rename "jsondict" into something sensible
+ - http://elanor.zaitcev.lan/slasti/zaitcev/login?savedref=new?
+   <-- what is this question mark at the end?
 
 zaitcev@kotori.zaitcev.us
 
