@@ -10,25 +10,6 @@ import string
 import re
 
 
-class TemplateError(ValueError):
-    def __init__(self, m, message):
-        self.m = m
-        self.message = message
-
-        # m is the match object where the error occurred
-        # m.string is always the complete template_str, see comment below
-        i = m.start()
-        lines = m.string[:i].splitlines(True)
-        if not lines:
-            colno = 1
-            lineno = 1
-        else:
-            colno = i - len(''.join(lines[:-1]))
-            lineno = len(lines)
-        ValueError.__init__(self, 'Template error at line %d, col %d\n%s' %
-                                  (lineno, colno, message))
-
-
 class LaxTemplate(string.Template):
     """string.Template with less strict placeholder syntax
 
@@ -146,76 +127,6 @@ class TemplateNodeRoot(TemplateNodeBase):
     # substitute() falls back to base class implementation
 
 
-class TemplateNode(TemplateNodeBase):
-    def __init__(self, start_match):
-        super(TemplateNode, self).__init__()
-        self.m_start = start_match
-        self.m_end = None
-        self.dict = start_match.groupdict()
-        self.name = self.dict["name"]
-
-    def set_end(self, end_match):
-        self.m_end = end_match
-
-    @staticmethod
-    def _varname_generator():
-        "Helper for _eval_template_code to generate unique variable names"
-        i = 0
-        while True:
-            yield "tmplvar%d" % i
-            i += 1
-
-    def _eval_template_code(self, code, d):
-        """Eval an expression containing template placeholders"""
-        # Strategy:
-        # * Substitute each placeholder string with a unique variable name
-        #   (tmplvar0, tmplvar1, ...)
-        # * Place the variable name in a dict together with the lookup value
-        #   for the placeholder: { "tmplvar0": lookup_value, ... }
-        # * eval() the substituted string, using the varname/lookup_value dict
-        #   as globals argument for eval.
-        globals = {}
-        var_names = self._varname_generator()
-        def repl_fun(m):
-            expr = m.group("named") or m.group("braced")
-            varname = next(var_names)
-            globals[varname] = d[expr]
-            return varname
-
-        code = LaxTemplate.pattern.sub(repl_fun, code)
-        return eval(code, globals)
-
-    def substitute(self, d, children=None):
-        if children is None:
-            children = self.children
-
-        if self.name == "if":
-            # Split the children into if/else clauses (if else is present)
-            else_marker = [x for x in children
-                             if isinstance(x, TemplateNodeBase) and
-                                x.name == "else"]
-            if_clause = else_clause = []
-            if not else_marker:
-                if_clause = children
-            else:
-                else_index = children.index(else_marker[0])
-                if_clause = children[:else_index]
-                else_clause = children[else_index+1:]
-
-            # Transform the if code into a boolean: if_result: True/False
-            condition = self.dict["condition"]
-            if_result = self._eval_template_code(condition, d)
-
-            # Substitute the correct template
-            if if_result:
-                return super(TemplateNode, self).substitute(d, if_clause)
-            else:
-                return super(TemplateNode, self).substitute(d, else_clause)
-
-        # Some control construct not handled properly
-        raise NotImplementedError("Control directive handler missing")
-
-
 class TemplateNodeElem(TemplateNodeBase):
     def __init__(self, elem):
         super(TemplateNodeElem, self).__init__()
@@ -239,79 +150,12 @@ class Template:
         return ' '.join([str(arg) for arg in self.template_list])
 
     def _build_template_tree(self):
-        def mk_re(s):
-            # re.MULTILINE so that $ matches EOL, not only end-of-string
-            return re.compile(s, re.VERBOSE | re.MULTILINE)
-
-        re_directive = mk_re(r"\r?\n\s*(?P<directive>\#.+)$")
-        directives = {
-            "if":   mk_re(r"""\#(?P<name>if)\s+(?P<condition>.+?)\s*$"""),
-            "else": mk_re(r"""\#(?P<name>else)\s*$"""),
-            "end":  mk_re(r"""\#(?P<name>end)\s+(?P<endof>if|for)\s*$"""),
-        }
-
         self.template_tree = TemplateNodeRoot()
         stack = [self.template_tree]
 
         for elem in self.template_list:
             if isinstance(elem, str) or isinstance(elem, unicode):
-
-                cursor = 0
-                for m_line in re_directive.finditer(elem):
-                    stack[-1].children.append(elem[cursor:m_line.start()])
-                    cursor = m_line.end()
-
-                    cseq = m_line.group("directive")
-                    cmd = [key for key in directives if cseq.startswith('#'+key)]
-                    if not cmd:
-                        raise TemplateError(m_line, "Unknown syntax: " + cseq)
-
-                    cmd = cmd[0]
-
-                    # Match template_str here, with a start_position argument
-                    # This keeps the whole template string alive in m_cmd.string
-                    # Important for showing line/column numbers on syntax errors
-                    # DO NOT optimize to directives[cmd].match(cseq)!
-                    # XXX Except we don't have template_str anymore.
-                    #   so the error line needs to include the template name
-                    m_cmd = directives[cmd].match(elem,
-                                          pos=m_line.start("directive"))
-                    if not m_cmd:
-                        raise TemplateError(m_line,
-                                    "Invalid %s clause: %s" % (cmd, cseq))
-
-                    if cmd == "if":
-                        sub = TemplateNode(m_cmd)
-                        stack[-1].children.append(sub)
-                        stack.append(sub)
-                    elif cmd == "for":
-                        sub = TemplateNode(m_cmd)
-                        stack[-1].children.append(sub)
-                        stack.append(sub)
-                    elif cmd == "else":
-                        if stack[-1].name != "if":
-                            raise TemplateError(m_line, "Else not within if: " + cseq)
-                        stack[-1].children.append(TemplateNode(m_cmd))
-                    elif cmd == "end":
-                        endof = m_cmd.group("endof")
-                        if endof not in set(["for", "if"]):
-                            raise TemplateError(m_line, "Unknown end tag: " + cseq)
-                        if endof != stack[-1].name:
-                            raise TemplateError(m_line, "End tag not matched: " + cseq)
-                        subtemplate = stack.pop()
-                        subtemplate.set_end(m_cmd)
-                    else:
-                        # A syntax regex was added above but is not actually handled
-                        raise NotImplementedError("Syntax handler missing")
-
-                if cursor < len(elem):
-                    stack[-1].children.append(elem[cursor:])
-
-                if len(stack) != 1:
-                    m = re.search('$', elem)
-                    raise TemplateError(m,
-                            "Open %s clause at end of file" % stack[-1].name)
-
+                stack[-1].children.append(elem)
             else:
                 sub = TemplateNodeElem(elem)
                 stack[-1].children.append(sub)
