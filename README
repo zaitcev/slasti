@@ -1,4 +1,4 @@
-Slasti version 1.90.dev
+Slasti version 1.92
 Unfortunately, Oishii was taken, so Slasti it is. It's good to be trilingual.
 
 TODO:
@@ -42,7 +42,7 @@ Decoding/encoding should be done "on the border" or very closeby.
 
 Decoding raw bytes on input:
 
- * ctx.path is alrady unicode, this is handled by slasti.wsgi.
+ * ctx.path is already unicode, this is handled by slasti.wsgi.
  * pinput and query strings should be obtained via ctx.get_pinput_arg() and
    ctx.get_query_arg() respectively. They handle encoding issues.
 
