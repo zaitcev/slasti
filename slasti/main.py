@@ -209,7 +209,8 @@ def fetch_body(url):
 #
 # The server-side indirection requires extreme care to prevent abuse.
 # User may hit us with URLs that point to generated pages, slow servers, etc.
-# As the last resort, we never work as a generic proxy.
+# Also, security. As the first defense, we require user to be logged in.
+# As the last resort, we never work as a generic proxy: only return the title.
 #
 def fetch_get(start_response, ctx):
     url = ctx.get_query_arg("url")
@@ -218,10 +219,9 @@ def fetch_get(start_response, ctx):
     body = fetch_body(url)
     title = fetch_parse(body)
 
-    start_response("200 OK", [('Content-type', 'text/plain; charset=utf-8')])
-    # XXX Ewww, why substitute here? Just safe it out. Compare with 1.2.
-    jsondict = { "output": '%s\r\n' % title }
-    return [template_simple_output.substitute(jsondict)]
+    output = ['%s\r\n' % title]
+    start_response("200 OK", [('Content-type', 'text/plain')])
+    return output
 
 def mark_post(start_response, ctx, mark):
     argd = find_post_args(ctx)
