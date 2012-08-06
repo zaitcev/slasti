@@ -538,10 +538,10 @@ def fetch_title(start_response, ctx):
 
 def redirect_to_login(start_response, ctx):
     userpath = ctx.prefix + '/' + ctx.user['name']
-    thisref = ctx.path + '?' + urllib.quote_plus(ctx._query)
+    thisref = ctx.path
     login_loc = userpath + '/login?savedref=' + thisref
-    response_headers = [('Content-type', 'text/html; charset=utf-8'),
-                        ('Location', slasti.safestr(login_loc))]
+    response_headers = [('Content-type', 'text/html; charset=utf-8')]
+    response_headers.append(('Location', slasti.safestr(login_loc)))
     start_response("303 See Other", response_headers)
 
     jsondict = { "href_redir": login_loc }

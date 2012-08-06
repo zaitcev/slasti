@@ -16,9 +16,8 @@ http://www.reallifecomics.com/
 <title>Real Life Comics - The Online Comic &copy;1999-2010 Greg Dean</title>
 
 fixup TODO for templates:
+ - "[edit]" is not shown at marks in 1.2 if not logged in.
  - rename "jsondict" into something sensible
- - http://elanor.zaitcev.lan/slasti/zaitcev/login?savedref=new?
-   <-- what is this question mark at the end?
 
 zaitcev@kotori.zaitcev.us
 
