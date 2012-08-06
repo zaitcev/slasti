@@ -67,11 +67,10 @@ class DictWrapper:
     def _enforce_encoding(self, s):
         # handle HTML escaping stuff here
         # character encoding is done on the finished expanded template
-        if isinstance(s, unicode):
+        if isinstance(s, unicode) or isinstance(s, str):
             return escapeHTML(s)
-        if isinstance(s, str):
-            print ("str found:", s)
-            return s
+        # We end here for every list, such as "$tags". The contents get
+        # later escaped above too, as they get looked up one by one.
         return s
 
     def __getitem__(self, item):
@@ -160,26 +159,10 @@ class Template:
                 sub = TemplateNodeElem(elem)
                 stack[-1].children.append(sub)
 
-    def _check_encoding(self, d):
-        if isinstance(d, dict):
-            for key in d:
-                self._check_encoding(d[key])
-            return
-        if isinstance(d, list):
-            for item in d:
-                self._check_encoding(item)
-            return
-        if d is None:
-            return
-        if isinstance(d, unicode) or isinstance(d, int):
-            return
-        print "->", type(d), repr(d)
-
     def substitute_2(self, d):
         return self.template_tree.substitute(DictWrapper(d))
 
     def substitute(self, d):
-        self._check_encoding(d)
         return self.template_tree.substitute(DictWrapper(d)).encode("utf-8")
 
 class TemplateElemLoop:
@@ -238,5 +221,4 @@ class TemplateElemCond:
         return body.substitute_2(d)
 
     def substitute(self, d):
-        print "Legacy substitute of a conditional"
         return self.substitute_2(d)
