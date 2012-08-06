@@ -110,6 +110,7 @@ class Context:
         if self.flogin:
             jsondict["href_export"]= userpath + '/export.xml'
             jsondict["href_login"] = None
+            jsondict["flogin"] = "1"
         else:
             jsondict["href_export"]= None
             jsondict["href_login"] = "%s/login" % userpath

@@ -643,14 +643,15 @@ template_html_body_top = Template("""
     </td>
     <td align="right">
 """,
-        TemplateElemCond('href_login',
-            ' [<a href="$href_login">login</a>]', None),
+      TemplateElemCond('href_login',
+'        [<a href="$href_login">login</a>]', None),
 """
         [<b><a href="$href_tags">tags</a></b>]
         [<a href="$href_new">new</a>]
 """,
-        TemplateElemCond('href_export',
-            '[<a href="$href_export">e</a>]', '[e]'),
+      TemplateElemCond('href_export',
+'        [<a href="$href_export">e</a>]',
+'        [e]'),
 """
     </td>
 </tr></table>
@@ -664,7 +665,7 @@ template_html_body_bottom = Template("""
 """)
 
 template_html_tag = Template(
-' <a href="${tag.href_tag}">${tag.name_tag}</a>'
+'      <a href="${tag.href_tag}">${tag.name_tag}</a>\r\n'
 )
 
 template_html_pagemark = Template("""
@@ -687,25 +688,20 @@ template_html_page = Template(
     TemplateElemLoop('mark','marks',template_html_pagemark),
     template_html_body_bottom)
 
-# XXX In 1.2 the "[edit] button was only shown if logged in.
 template_html_mark = Template(
     template_html_header,
     template_html_body_top,
     """
-        <p>${mark.date}<br />
-          <a href="${mark.href_mark_url}">${mark.title}</a>
+    <p>${mark.date}<br />
+          <a href="${mark.href_mark_url}">${mark.title}</a> <br />
     """,
-    TemplateElemCond('mark.note', '<br />\r\n    ${mark.note}', None),
-    """
-          <br />
-    """,
+          TemplateElemCond('mark.note', '      ${mark.note}<br />\r\n', None),
           TemplateElemLoop('tag','mark.tags',template_html_tag),
     """
-        </p>
-        <p>
-        [<a href="$href_edit">edit</a>]
-        </p>
+    </p>
     """,
+    TemplateElemCond('flogin',
+        '    <p>[<a href="$href_edit">edit</a>]</p>\r\n', None),
     template_html_body_bottom)
 
 template_html_tags = Template(
