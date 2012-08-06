@@ -360,7 +360,6 @@ def login_post(start_response, ctx):
     # pinput = "password=test&OK=Enter" and possibly a newline
     savedref = ctx.get_pinput_arg("savedref")
     if savedref:
-        savedref = savedref.decode("utf-8", 'replace')
         redihref = "%s/%s" % (userpath, savedref)
     else:
         redihref = "%s/" % userpath;
