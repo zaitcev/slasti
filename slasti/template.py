@@ -77,7 +77,6 @@ class DictWrapper:
         # Separate the query into the real lookup string and the default
         # Then do the lookup; if it blows up or the result is None, return the
         # default. Otherwise return the looked up value
-        # XXX WTF we have defaults?!
         lookup_str, default = self._parse_default(item)
         default = self._enforce_encoding(default)
         try:

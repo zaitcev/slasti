@@ -7,10 +7,8 @@
 #
 
 import time
-import urllib
 import urlparse
 import base64
-import cgi
 import os
 import hashlib
 import httplib

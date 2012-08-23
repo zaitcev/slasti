@@ -77,7 +77,6 @@ def do_root(environ, start_response):
     if method != 'GET':
         raise AppGetError(method)
 
-    # XXX This really needs some kind of a pretty picture.
     start_response("200 OK", [('Content-type', 'text/plain')])
     return ["Slasti: The Anti-Social Bookmarking\r\n",
             "(https://github.com/zaitcev/slasti)\r\n"]
