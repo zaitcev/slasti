@@ -1,5 +1,5 @@
-Slasti version 1.98
-Unfortunately, Oishii was taken, so Slasti it is. It's good to be trilingual.
+Slasti version 2.0
+Unfortunately, Oishii was taken, so Slasti it is.
 
 TODO:
  - invoke del2sla from an upload form
@@ -15,6 +15,7 @@ http://www.reallifecomics.com/
  - redo filesystem-based tagbase format with an index, /tags take too long
  - configurable templates loaded from text files
  - how about a templatized root (not user's root, the root root in slasti.wsgi)
+   - add version to it, extract from where? only in README at present
 
 fixup TODO for templates:
  - rename "jsondict" into something sensible

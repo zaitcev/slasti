@@ -343,7 +343,7 @@ def login_form(start_response, ctx):
     savedref = ctx.get_query_arg("savedref")
 
     start_response("200 OK", [('Content-type', 'text/html; charset=utf-8')])
-    # XXX Common constructor with jsondict_create
+    # XXX Common constructor with create_jsondict?
     jsondict = {
             "username": username,
             "action_login": "%s/login" % userpath,
