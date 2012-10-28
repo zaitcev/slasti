@@ -632,6 +632,10 @@ template_html_header = Template("""
 <body>
 """)
 
+#template_html_controls = Template(
+#"""
+#""")
+
 template_html_body_top = Template("""
 <table width="100%" style="background: #ebf7eb"
  border=0 cellpadding=1 cellspacing=0>
@@ -641,16 +645,16 @@ template_html_body_top = Template("""
     </td>
     <td align="right">
 """,
-      TemplateElemCond('href_login',
-'        [<a href="$href_login">login</a>]', None),
+    TemplateElemCond('flogin',
+"""
+        [<a href="$href_new">new</a>]
+        [<a href="$href_export">e</a>]
+""",
+"""
+        [<a href="$href_login">login</a>]
+"""),
 """
         [<b><a href="$href_tags">tags</a></b>]
-        [<a href="$href_new">new</a>]
-""",
-      TemplateElemCond('href_export',
-'        [<a href="$href_export">e</a>]',
-'        [e]'),
-"""
     </td>
 </tr></table>
 """)
@@ -689,15 +693,15 @@ template_html_page = Template(
 template_html_mark = Template(
     template_html_header,
     template_html_body_top,
-    """
+"""
     <p>${mark.date}<br />
           <a href="${mark.href_mark_url}">${mark.title}</a> <br />
-    """,
+""",
           TemplateElemCond('mark.note', '      ${mark.note}<br />\r\n', None),
           TemplateElemLoop('tag','mark.tags',template_html_tag),
-    """
+"""
     </p>
-    """,
+""",
     TemplateElemCond('flogin',
         '    <p>[<a href="$href_edit">edit</a>]</p>\r\n', None),
     template_html_body_bottom)
@@ -720,33 +724,33 @@ template_html_tags = Template(
 template_html_delete = Template(
     template_html_header,
     template_html_body_top,
-    """
+"""
     <p>Deleted.</p>
     </body></html>
-    """)
+""")
 
 template_html_login = Template(
     template_html_header,
-    """
+"""
     <form action="$action_login" method="POST">
       $username:
       <input name=password type=password size=32 maxlength=32 />
       <input name=OK type=submit value="Enter" />
-    """,
+""",
     TemplateElemCond('savedref',
       '    <input name=savedref type=hidden value="$savedref" />', None),
-    """
+"""
     </form>
     </body>
     </html>
-    """)
+""")
 
 template_html_redirect = Template(
     template_html_header,
-    """
+"""
     <p><a href="$href_redir">See Other</a></p>
     </body></html>
-    """)
+""")
 
 template_html_editform = Template(
     template_html_header,
@@ -798,6 +802,6 @@ template_html_editform = Template(
 """
     <hr />
     </body></html>
-    """)
+""")
 
 template_simple_output = Template("""$output""")
