@@ -27,10 +27,3 @@ fixup TODO for templates:
  - Run down XXX
 
 zaitcev@kotori.zaitcev.us
-
------ bookmarklet - XXX not parameterized; XXX login needs fixing
-  <a href="javascript:location.href=
-           'https://slasti.zaitcev.us/zaitcev/new' +
-           '?title=' + encodeURIComponent(document.title) +
-           '&href=' + encodeURIComponent(location.href)
-          ">Post to Slasti</a>

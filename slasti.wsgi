@@ -141,6 +141,9 @@ def do_user(environ, start_response, path):
     else:
         pinput = None
 
+    scheme = environ['wsgi.url_scheme']
+    netloc = environ['HTTP_HOST']
+
     # Query is already split away by the CGI.
     parsed = path.split("/", 2)
 
@@ -172,7 +175,9 @@ def do_user(environ, start_response, path):
     base = slasti.tagbase.TagBase(user['root'])
     base.open()
 
-    ctx = slasti.Context(pfx, user, base, method, path, q, pinput, c)
+    ctx = slasti.Context(pfx, user, base,
+                         method, scheme, netloc, path,
+                         q, pinput, c)
     output = slasti.main.app(start_response, ctx)
 
     base.close()

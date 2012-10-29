@@ -74,7 +74,8 @@ def escapeHTML(text):
 
 
 class Context:
-    def __init__(self, pfx, user, base, method, path, query, pinput, coos):
+    def __init__(self, pfx, user, base, method, scheme, netloc, path,
+                 query, pinput, coos):
         # prefix: Path where the application is mounted in WSGI or empty string.
         self.prefix = pfx
         # user: Username.
@@ -83,6 +84,10 @@ class Context:
         self.base = base
         # method: The HTTP method (GET, POST, or garbage)
         self.method = method
+        # scheme: http or https
+        self._scheme = scheme
+        # netloc: host.domain:port
+        self._netloc = netloc
         # path: The remaining path after the user. Not the full URL path.
         # This may be empty (we permit user with no trailing slash).
         self.path = path
@@ -110,6 +115,8 @@ class Context:
         if self.flogin:
             jsondict["href_export"]= userpath + '/export.xml'
             jsondict["href_login"] = None
+            jsondict["hrefa_new"] = \
+                    "%s://%s%s/new" % (self._scheme, self._netloc, userpath)
             jsondict["flogin"] = "1"
         else:
             jsondict["href_export"]= None

@@ -632,9 +632,19 @@ template_html_header = Template("""
 <body>
 """)
 
-#template_html_controls = Template(
-#"""
-#""")
+# The &href should be escaped (although Firefox eats it fine)
+template_html_controls = Template(
+"""
+        [<a href="$href_new">new</a>]
+        [<a href="javascript:
+ var F=document;
+ ref = '';
+ ref += '$hrefa_new';
+ ref += '?title=' + F.title;
+ ref += '&href=' + location.href;
+ F.location = ref" title="Drag This To Toolbar">bm</a>]
+        [<a href="$href_export">e</a>]
+""")
 
 template_html_body_top = Template("""
 <table width="100%" style="background: #ebf7eb"
@@ -646,13 +656,11 @@ template_html_body_top = Template("""
     <td align="right">
 """,
     TemplateElemCond('flogin',
-"""
-        [<a href="$href_new">new</a>]
-        [<a href="$href_export">e</a>]
-""",
+        template_html_controls,
 """
         [<a href="$href_login">login</a>]
-"""),
+"""
+    ),
 """
         [<b><a href="$href_tags">tags</a></b>]
     </td>
