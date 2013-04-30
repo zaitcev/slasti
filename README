@@ -4,12 +4,11 @@ Unfortunately, Oishii was taken, so Slasti it is.
 TODO:
  - redo filesystem-based tagbase format with an index, /tags take too long
  - return an iterateable for XML (people use iterator with yield)
- - search/group tags with javascript for tablets, scrolling too hard
+ - search, aggregate in tags page - for tablets with poor ^F
  - tests (Christan's main() in template.py lacked verification)
  - invoke del2sla from an upload form
    - what if pre-existing marks exist? how to merge?
  - dedup URLs (show found ones at the time of entry)
- - search, aggregate in tags page - for tablets with poor ^F
  - localizations
  - make .substitute to return a list-of-strings; million useless .join now
  - replace sgmllib.SGMLParser with something better. Fails at HTML:
