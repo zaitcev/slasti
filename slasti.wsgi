@@ -205,12 +205,7 @@ def application(environ, start_response):
         #    return do_environ(environ, start_response)
         else:
             output = do_user(environ, start_response, path)
-
-        # The framework blows up if a unicode string leaks into output list.
-        safeout = []
-        for s in output:
-            safeout.append(slasti.safestr(s))
-        return safeout
+        return output
 
     except AppError, e:
         start_response("500 Internal Error", [('Content-type', 'text/plain')])

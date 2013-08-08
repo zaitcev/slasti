@@ -301,23 +301,32 @@ def root_tag_html(start_response, ctx, tag):
         raise AppGetError(ctx.method)
     return page_any_html(start_response, ctx, mark)
 
+class MarkDumper(object):
+    def __init__(self, base, user):
+        self.username = user['name']
+        self.base = tagbase.TagBase(base.dirname)
+    # <posts user="zaitcev" update="2010-12-16T20:17:55Z" tag="" total="860">
+    # We omit total. Also, we noticed that Del.icio.us often miscalculates
+    # the total, so obviously it's not used by any applications.
+    # We omit the last update as well. Our data base does not keep it.
+    def __iter__(self):
+        self.base.open()
+        try:
+            yield '<?xml version="1.0" encoding="UTF-8"?>\n'
+            yield '<posts user="'+self.username+'" tag="">\n'
+            for mark in self.base:
+                yield slasti.safestr(mark.xml())
+            yield '</posts>\n'
+        finally:
+            self.base.close()
+
 # full_mark_html() would be a Netscape bookmarks file, perhaps.
 def full_mark_xml(start_response, ctx):
     if ctx.method != 'GET':
         raise AppGetError(ctx.method)
     response_headers = [('Content-type', 'text/xml; charset=utf-8')]
     start_response("200 OK", response_headers)
-    output = []
-    output.append('<?xml version="1.0" encoding="UTF-8"?>\n')
-    # <posts user="zaitcev" update="2010-12-16T20:17:55Z" tag="" total="860">
-    # We omit total. Also, we noticed that Del.icio.us often miscalculates
-    # the total, so obviously it's not used by any applications.
-    # We omit the last update as well. Our data base does not keep it.
-    output.append('<posts user="'+ctx.user['name']+'" tag="">\n')
-    for mark in ctx.base:
-        output.append(slasti.safestr(mark.xml()))
-    output.append("</posts>\n")
-    return output
+    return MarkDumper(ctx.base, ctx.user)
 
 def full_tag_html(start_response, ctx):
     if ctx.method != 'GET':

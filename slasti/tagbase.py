@@ -313,8 +313,7 @@ class TagMarkCursor:
     def __init__(self, base):
         self.base = base
         # Apparently Python does not provide opendir() and friends, so our
-        # cursor actually loads whole list in memory. As long as the whole
-        # HTML output is in memory too, there is no special concern.
+        # cursor actually loads whole list in memory.
         # If we cared enough, we'd convert filenames to stamps right away,
         # then sorted an array of integers. But we don't.
         # Most likely we'll switch to a database back-end anyway.
