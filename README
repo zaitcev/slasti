@@ -20,6 +20,8 @@ http://www.bazl.admin.ch/experten/regulation/03080/03081/index.html
  - how about a templatized root (not user's root, the root root in slasti.wsgi)
    - add version to it, extract from where? only in README at present
  - 2.0.1 bookmarklet cannot be used unless already logged in, needs a retry.
+ - Implement HEAD, make sure returns no body on error
+ - report basic performance data (in-page or out-of-band, either works)
 
 fixup TODO for templates:
  - rename "jsondict" into something sensible
