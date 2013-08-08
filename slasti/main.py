@@ -313,7 +313,7 @@ class MarkDumper(object):
         self.base.open()
         try:
             yield '<?xml version="1.0" encoding="UTF-8"?>\n'
-            yield '<posts user="'+self.username+'" tag="">\n'
+            yield '<posts user="'+slasti.safestr(self.username)+'" tag="">\n'
             for mark in self.base:
                 yield slasti.safestr(mark.xml())
             yield '</posts>\n'
