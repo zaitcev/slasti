@@ -280,15 +280,12 @@ class TagMark:
             "key": "%d.%02d" % (self.stamp0, self.stamp1),
         }
 
-        tags_str = []
         for tag in self.tags:
-            tags_str.append(tag)
             jsondict["tags"].append(
                 {"href_tag": '%s/%s/' % (path_prefix,
                                          slasti.escapeURLComponent(tag)),
                  "name_tag": tag,
                 })
-        jsondict["tags_str"] = ' '.join(tags_str)
 
         jsondict['_main_path'] = u"MOO"
 
