@@ -174,7 +174,7 @@ def fetch_parse(chunk):
 def fetch_body(url):
     # XXX Seriously, sanitize url before parsing
 
-    scheme, host, path, u_par, u_query, u_frag = urlparse.urlparse(url)
+    scheme, host, path, u_query, u_frag = urlparse.urlsplit(url)
     if scheme != 'http' and scheme != 'https':
         raise App400Error("bad url scheme")
 
@@ -186,7 +186,8 @@ def fetch_body(url):
     else:
         conn = httplib.HTTPSConnection(host, timeout=25)
 
-    conn.request("GET", path, None, headers)
+    fullpath = urlparse.urlunsplit((None, None, path, u_query, None))
+    conn.request("GET", fullpath, None, headers)
     response = conn.getresponse()
     # XXX A different return code for 201 and 204?
     if response.status != 200:
