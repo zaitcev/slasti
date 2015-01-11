@@ -14,12 +14,23 @@ http://www.reallifecomics.com/
 <title>Real Life Comics - The Online Comic &copy;1999-2010 Greg Dean</title>
 http://www.bazl.admin.ch/experten/regulation/03080/03081/index.html
 <title>BAZL - Anh&auml;nge zur Konvention der ... (ICAO)</title>
+    - re
+    - xml.dom.minidom (h/t torgomatic)
+    - <Alex_Gaynor> zaitcev: lxml is the best (IMO) + PyQuery for parsing HTML
+   see also http://docs.python.org/2/library/xml.html#xml-vulnerabilities
  - configurable templates loaded from text files
  - how about a templatized root (not user's root, the root root in slasti.wsgi)
    - add version to it, extract from where? only in README at present
  - 2.0.1 bookmarklet cannot be used unless already logged in, needs a retry.
+ - bookmarklet cannot pre-load a Github page, fails with:
+Content Security Policy: The page's settings blocked the loading of a resource at self ("script-src https://assets-cdn.github.com https://collector-cdn.github.com").
  - Implement HEAD, make sure returns no body on error
  - report basic performance data (in-page or out-of-band, either works)
+ - "Edit" buttons in page listsings, it's an extra step to edit currently
+ - rate-limit logins
+ - look into 3rd party login with Mozilla (what's its name? Persona?)
+   - they already cancelled that lol - search for a better provider
+ - obey hosts.deny and make sure that denyhosts parses the logs
 
 fixup TODO for templates:
  - rename "jsondict" into something sensible
