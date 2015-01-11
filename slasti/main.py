@@ -17,7 +17,6 @@ import sgmllib
 
 from slasti import AppError, App400Error, AppLoginError, App404Error
 from slasti import AppGetError, AppGetPostError
-from slasti import Context
 import slasti
 import tagbase
 from template import Template, TemplateElemLoop, TemplateElemCond
