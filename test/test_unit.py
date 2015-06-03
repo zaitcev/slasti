@@ -68,3 +68,13 @@ class TestUnit(unittest.TestCase):
         self.assertEquals(export_str, export_master)
 
         shutil.rmtree(base_dir)
+
+    def test_fetch_parse(self):
+        html1 = """
+            <html>
+                <title>Simple Test</title>
+                <body><p>moo</p></body>
+            </html>
+        """
+        title1 = slasti.main.fetch_parse(html1)
+        self.assertEquals('Simple Test', title1)
