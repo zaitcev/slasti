@@ -200,7 +200,7 @@ def fetch_get(start_response, ctx):
     body = fetch_body(url)
     title = fetch_parse(body)
 
-    output = ['%s\r\n' % title]
+    output = ['%s\r\n' % slasti.safestr(title)]
     start_response("200 OK", [('Content-type', 'text/plain')])
     return output
 
