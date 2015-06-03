@@ -70,6 +70,7 @@ class TestUnit(unittest.TestCase):
         shutil.rmtree(base_dir)
 
     def test_fetch_parse(self):
+
         html1 = """
             <html>
                 <title>Simple Test</title>
@@ -78,3 +79,12 @@ class TestUnit(unittest.TestCase):
         """
         title1 = slasti.main.fetch_parse(html1)
         self.assertEquals('Simple Test', title1)
+
+        html2 = """
+            <html>
+                <title>The Online Comic &copy;1999-2010 Greg Dean</title>
+                <body><p>moo</p></body>
+            </html>
+        """
+        title2 = slasti.main.fetch_parse(html2)
+        self.assertEquals(u'The Online Comic \xa91999-2010 Greg Dean', title2)

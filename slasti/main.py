@@ -6,14 +6,13 @@
 # See file COPYING for licensing information (expect GPL 2).
 #
 
+import bs4
 import time
 import urlparse
 import base64
 import os
 import hashlib
 import httplib
-# XXX sgmllib was removed in Python 3.0
-import sgmllib
 
 from slasti import AppError, App400Error, AppLoginError, App404Error
 from slasti import AppGetError, AppGetPostError
@@ -148,26 +147,10 @@ def delete_post(start_response, ctx):
     jsondict = ctx.create_jsondict()
     return [template_html_delete.substitute(jsondict)]
 
-class FetchParser(sgmllib.SGMLParser):
-    def __init__(self, verbose=0):
-        sgmllib.SGMLParser.__init__(self, verbose)
-        self.in_title = False
-        self.titlestr = None
-    def start_title(self, attributes):
-        self.in_title = True
-    def end_title(self):
-        self.in_title = False
-    def handle_data(self, data):
-        if self.in_title:
-            self.titlestr = data
-
 def fetch_parse(chunk):
-    parser = FetchParser()
-    parser.feed(chunk)
-    parser.close()
-    if parser.titlestr == None:
-        return "(none)"
-    return parser.titlestr
+    soup = bs4.BeautifulSoup(chunk)
+    titlestr = soup.head.title.get_text()
+    return titlestr
 
 # XXX This may need switching to urllib yet, if 301 redirects become a problem.
 def fetch_body(url):
