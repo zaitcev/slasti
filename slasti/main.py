@@ -621,6 +621,11 @@ template_html_header = Template("""
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 </head>
+<style type="text/css">
+  body {
+    background-color: white;
+  }
+</style>
 <body>
 """)
 
