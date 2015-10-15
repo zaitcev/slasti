@@ -2,6 +2,10 @@ Slasti version 2.0.3-dev
 Unfortunately, Oishii was taken, so Slasti it is.
 
 TODO:
+ - 2015 - bug - Preload hangs the whole server often
+ - add Kris' nonce
+ - port to Jinja2 templates
+ - port to Python 3
  - redo filesystem-based tagbase format with an index, /tags take too long
  - search, aggregate in tags page - for tablets with poor ^F
  - invoke del2sla from an upload form
@@ -29,4 +33,4 @@ fixup TODO for templates:
    - macro variables list - document starting with underscore
  - Run down XXX
 
-zaitcev@kotori.zaitcev.us
+zaitcev@yahoo.com
