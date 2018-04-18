@@ -58,9 +58,9 @@ def do(dirname, xmlname):
     try:
         # Verify XML has UTF-8 encoding perhaps?
         etree = ElementTree.parse(xmlname)
-    except IOError, e:
+    except IOError as e:
         raise AppError(str(e))
-    except ElementTree.ParseError, e:
+    except ElementTree.ParseError as e:
         raise AppError(xmlname+": "+str(e))
     etroot = etree.getroot()
     if etroot == None:
@@ -110,7 +110,7 @@ def do(dirname, xmlname):
 
         try:
             timeval = time.strptime(timestr, "%Y-%m-%dT%H:%M:%SZ")
-        except ValueError, e:
+        except ValueError as e:
             # We bug out on this because this case may be worth diagnosing.
             # The error message has both format and unparsed date string.
             raise AppError(str(e))
@@ -119,7 +119,7 @@ def do(dirname, xmlname):
 
         try:
             timeint = calendar.timegm(timeval)
-        except (ValueError, OverflowError), e:
+        except (ValueError, OverflowError) as e:
             # XXX A user supplied Year 1900 or something like that.
             print e
             continue
@@ -138,7 +138,7 @@ def main(args):
 
     try:
         do(dirname, xmlname)
-    except AppError, e:
+    except AppError as e:
         print >>sys.stderr, TAG+":", e
         sys.exit(1)
 

@@ -60,7 +60,7 @@ def split_marks(tagstr):
 def load_tag(tagdir, tag):
     try:
         f = open(tagdir+"/"+fs_encode(tag), "r")
-    except IOError, e:
+    except IOError as e:
         f = None
     if f != None:
         # This can be a long read - tens of thousands of mark keys
@@ -391,12 +391,12 @@ class TagBase:
     def open(self):
         try:
             os.mkdir(self.tagdir)
-        except OSError, e:
+        except OSError as e:
             if e.errno != errno.EEXIST:
                 raise AppError(str(e))
         try:
             os.mkdir(self.markdir)
-        except OSError, e:
+        except OSError as e:
             if e.errno != errno.EEXIST:
                 raise AppError(str(e))
 
@@ -426,7 +426,7 @@ class TagBase:
     def store(self, markname, stampkey, title, url, note, tags):
         try:
             f = open(self.markdir+"/"+markname, "w+")
-        except IOError, e:
+        except IOError as e:
             raise AppError(str(e))
 
         # This is done because ElementTree throws Unicode strings at us.
@@ -465,7 +465,7 @@ class TagBase:
             # 3. Write
             try:
                 f = open(self.tagdir+"/"+fs_encode(t), "w")
-            except IOError, e:
+            except IOError:
                 continue
             f.write(tagbuf)
             f.close()
@@ -484,7 +484,7 @@ class TagBase:
                 tagbuf = " ".join(mark_list)
                 try:
                     f = open(self.tagdir+"/"+fs_encode(t), "w")
-                except IOError, e:
+                except IOError:
                     continue
                 f.write(tagbuf)
                 f.close()
@@ -545,7 +545,7 @@ class TagBase:
         self.links_del(markname, old_tags)
         try:
             os.unlink(self.markdir+"/"+markname)
-        except IOError, e:
+        except IOError as e:
             raise AppError(str(e))
 
     def __iter__(self):

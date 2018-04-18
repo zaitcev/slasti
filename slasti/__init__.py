@@ -5,8 +5,7 @@
 # See file COPYING for licensing information (expect GPL 2).
 #
 
-import urllib
-import urlparse
+from six.moves.urllib.parse import parse_qs, quote_plus
 
 
 class AppError(Exception):
@@ -32,7 +31,7 @@ def safestr(u):
 
 def escapeURLComponent(s):
     # Turn s into a bytes first, quote_plus blows up otherwise
-    return unicode(urllib.quote_plus(s.encode("utf-8")))
+    return unicode(quote_plus(s.encode("utf-8")))
 
 def escapeURL(s):
     # quote_plus() doesn't work as it clobbers the :// portion of the URL
@@ -137,7 +136,7 @@ class Context:
         if args is None:
             return {}
 
-        qdic = urlparse.parse_qs(args)
+        qdic = parse_qs(args)
         for key in qdic:
             qdic[key] = qdic[key][0].decode("utf-8", 'replace')
 
@@ -154,4 +153,4 @@ class Context:
         return self._pinput_args.get(argname, None)
 
 
-import main, tagbase
+import slasti.main, slasti.tagbase

@@ -8,17 +8,17 @@
 
 import bs4
 import time
-import urlparse
 import base64
 import os
 import hashlib
-import httplib
+
+from six.moves import http_client
+from six.moves.urllib.parse import urlsplit, urlunsplit
 
 from slasti import AppError, App400Error, AppLoginError, App404Error
 from slasti import AppGetError, AppGetPostError
 import slasti
-import tagbase
-from template import Template, TemplateElemLoop, TemplateElemCond
+from .template import Template, TemplateElemLoop, TemplateElemCond
 
 PAGESZ = 25
 
@@ -158,7 +158,7 @@ def fetch_parse(chunk):
 def fetch_body(url):
     # XXX Seriously, sanitize url before parsing
 
-    scheme, host, path, u_query, u_frag = urlparse.urlsplit(url)
+    scheme, host, path, u_query, u_frag = urlsplit(url)
     if scheme != 'http' and scheme != 'https':
         raise App400Error("bad url scheme")
 
@@ -166,11 +166,11 @@ def fetch_body(url):
     # XXX Forward the Referer: that we received from the client, if any.
 
     if scheme == 'http':
-        conn = httplib.HTTPConnection(host, timeout=25)
+        conn = http_client.HTTPConnection(host, timeout=25)
     else:
-        conn = httplib.HTTPSConnection(host, timeout=25)
+        conn = http_client.HTTPSConnection(host, timeout=25)
 
-    fullpath = urlparse.urlunsplit((None, None, path, u_query, None))
+    fullpath = urlunsplit((None, None, path, u_query, None))
     conn.request("GET", fullpath, None, headers)
     response = conn.getresponse()
     # XXX A different return code for 201 and 204?
@@ -209,7 +209,7 @@ def fetch_get(start_response, ctx):
 def mark_post(start_response, ctx, mark):
     argd = find_post_args(ctx)
 
-    tags = tagbase.split_marks(argd['tags'])
+    tags = slasti.tagbase.split_marks(argd['tags'])
     (stamp0, stamp1) = mark.key()
     ctx.base.edit1(stamp0, stamp1,
                    argd['title'], argd['href'], argd['extra'], tags)
@@ -289,7 +289,7 @@ def root_tag_html(start_response, ctx, tag):
 class MarkDumper(object):
     def __init__(self, base, user):
         self.username = user['name']
-        self.base = tagbase.TagBase(base.dirname)
+        self.base = slasti.tagbase.TagBase(base.dirname)
     # <posts user="zaitcev" update="2010-12-16T20:17:55Z" tag="" total="860">
     # We omit total. Also, we noticed that Del.icio.us often miscalculates
     # the total, so obviously it's not used by any applications.
@@ -489,7 +489,7 @@ def edit_post(start_response, ctx):
     userpath = ctx.prefix+'/'+username
 
     argd = find_post_args(ctx)
-    tags = tagbase.split_marks(argd['tags'])
+    tags = slasti.tagbase.split_marks(argd['tags'])
 
     stamp0 = int(time.time())
     stamp1 = ctx.base.add1(stamp0,

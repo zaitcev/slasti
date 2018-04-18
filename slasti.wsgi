@@ -8,7 +8,7 @@
 import json
 import types
 # import sys
-import Cookie
+from six.moves import http_cookies
 
 # CFGUSERS was replaced by  SetEnv slasti.userconf /slasti-users.conf
 # CFGUSERS = "/etc/slasti-users.conf"
@@ -29,12 +29,12 @@ class UserBase:
     def open(self, userconf):
         try:
             fp = open(userconf, 'r')
-        except IOError, e:
+        except IOError as e:
             raise AppError(str(e))
 
         try:
             self.users = json.load(fp)
-        except ValueError, e:
+        except ValueError as e:
             raise AppError(str(e))
 
         fp.close()
@@ -141,10 +141,10 @@ def do_user(environ, start_response, path):
     except KeyError:
         q = None
 
-    c = Cookie.SimpleCookie()
+    c = http_cookies.SimpleCookie()
     try:
         c.load(environ['HTTP_COOKIE'])
-    except Cookie.CookieError, e:
+    except http_cookies.CookieError as e:
         start_response("400 Bad Request", [('Content-type', 'text/plain')])
         return ["400 Bad Cookie: "+slasti.safestr(unicode(e))+"\r\n"]
     except KeyError:
@@ -183,27 +183,27 @@ def application(environ, start_response):
             output = do_user(environ, start_response, path)
         return output
 
-    except AppError, e:
+    except AppError as e:
         start_response("500 Internal Error", [('Content-type', 'text/plain')])
         return [slasti.safestr(unicode(e)), "\r\n"]
-    except slasti.App400Error, e:
+    except slasti.App400Error as e:
         start_response("400 Bad Request", [('Content-type', 'text/plain')])
         return ["400 Bad Request: %s\r\n" % slasti.safestr(unicode(e))]
-    except slasti.AppLoginError, e:
+    except slasti.AppLoginError as e:
         start_response("403 Not Permitted", [('Content-type', 'text/plain')])
         return ["403 Not Logged In\r\n"]
-    except App404Error, e:
+    except App404Error as e:
         start_response("404 Not Found", [('Content-type', 'text/plain')])
         return [slasti.safestr(unicode(e)), "\r\n"]
-    except AppGetError, e:
+    except AppGetError as e:
         start_response("405 Method Not Allowed",
                        [('Content-type', 'text/plain'), ('Allow', 'GET')])
         return ["405 Method %s not allowed\r\n" % slasti.safestr(unicode(e))]
-    except slasti.AppPostError, e:
+    except slasti.AppPostError as e:
         start_response("405 Method Not Allowed",
                        [('Content-type', 'text/plain'), ('Allow', 'POST')])
         return ["405 Method %s not allowed\r\n" % slasti.safestr(unicode(e))]
-    except slasti.AppGetPostError, e:
+    except slasti.AppGetPostError as e:
         start_response("405 Method Not Allowed",
                        [('Content-type', 'text/plain'), ('Allow', 'GET, POST')])
         return ["405 Method %s not allowed\r\n" % slasti.safestr(unicode(e))]
