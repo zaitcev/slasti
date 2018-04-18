@@ -5,6 +5,7 @@
 # See file COPYING for licensing information (expect GPL 2).
 #
 
+from __future__ import print_function
 from slasti import escapeHTML
 import string
 import re
@@ -134,7 +135,7 @@ class TemplateNodeElem(TemplateNodeBase):
         # forward to template element
         if children:
             # never happens?
-            print "Elem subst, children", self.name, len(children)
+            print("Elem subst, children", self.name, len(children))
             return super(TemplateNodeElem, self).substitute(d, children)
         return self.elem.substitute_2(d)
 
@@ -194,7 +195,7 @@ class TemplateElemLoop:
 
     def substitute(self, d):
         # never happens?
-        print "Legacy substitute of a loop"
+        print("Legacy substitute of a loop")
         return self.substitute_2(d)
 
 class TemplateElemCond:
