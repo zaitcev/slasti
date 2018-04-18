@@ -15,6 +15,7 @@ import Cookie
 
 # Replaced by  WSGIDaemonProcess slasti python-path=/usr/lib/slasti-mod
 # sys.path = sys.path + [ '/usr/lib/slasti-mod' ]
+
 import slasti
 from slasti import AppError, App404Error, AppGetError
 

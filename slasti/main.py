@@ -148,7 +148,9 @@ def delete_post(start_response, ctx):
     return [template_html_delete.substitute(jsondict)]
 
 def fetch_parse(chunk):
-    soup = bs4.BeautifulSoup(chunk)
+    # BeautifulSoup prints a warning about "using the best available HTML
+    # parser for this system" if defaults are used, so we must specify "lxml".
+    soup = bs4.BeautifulSoup(chunk, "lxml")
     titlestr = soup.head.title.get_text()
     return titlestr
 

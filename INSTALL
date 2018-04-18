@@ -2,7 +2,8 @@
 
 Slasti works through WSGI interface to a webserver, so mod_wsgi is typically
 employed. See INSTALL.mod_wsgi for specifics. It also needs Python 2.6 or
-thereabout. No database is used.
+later (Python 3 okay). No database is used. The Beautiful Soup (bs4) is used
+for form pre-fill.
 
 = passwords
 
