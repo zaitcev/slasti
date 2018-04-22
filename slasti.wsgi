@@ -80,8 +80,8 @@ def do_root(environ, start_response):
         raise AppGetError(method)
 
     start_response("200 OK", [('Content-type', 'text/plain')])
-    return ["Slasti: The Anti-Social Bookmarking\r\n",
-            "(https://github.com/zaitcev/slasti)\r\n"]
+    return [b"Slasti: The Anti-Social Bookmarking\r\n",
+            b"(https://github.com/zaitcev/slasti)\r\n"]
 
 def do_user(environ, start_response, path):
     # We will stop reloading UserBase on every call once we figure out how.
@@ -147,7 +147,7 @@ def do_user(environ, start_response, path):
         c.load(environ['HTTP_COOKIE'])
     except http_cookies.CookieError as e:
         start_response("400 Bad Request", [('Content-type', 'text/plain')])
-        return ["400 Bad Cookie: "+slasti.safestr(six.text_type(e))+"\r\n"]
+        return [b"400 Bad Cookie: "+slasti.safestr(six.text_type(e))+b"\r\n"]
     except KeyError:
         c = None
 
@@ -174,7 +174,7 @@ def application(environ, start_response):
         except UnicodeDecodeError:
             start_response("400 Bad Request",
                            [('Content-type', 'text/plain')])
-            return ["400 Unable to decode UTF-8 in path\r\n"]
+            return [b"400 Unable to decode UTF-8 in path\r\n"]
 
     try:
         if path == None or path == "" or path == "/":
@@ -185,31 +185,31 @@ def application(environ, start_response):
 
     except AppError as e:
         start_response("500 Internal Error", [('Content-type', 'text/plain')])
-        return [slasti.safestr(six.text_type(e)), "\r\n"]
+        return [slasti.safestr(six.text_type(e)), b"\r\n"]
     except slasti.App400Error as e:
         start_response("400 Bad Request", [('Content-type', 'text/plain')])
-        return ["400 Bad Request: %s\r\n" % slasti.safestr(six.text_type(e))]
+        return [b"400 Bad Request: %s\r\n" % slasti.safestr(six.text_type(e))]
     except slasti.AppLoginError as e:
         start_response("403 Not Permitted", [('Content-type', 'text/plain')])
-        return ["403 Not Logged In\r\n"]
+        return [b"403 Not Logged In\r\n"]
     except App404Error as e:
         start_response("404 Not Found", [('Content-type', 'text/plain')])
-        return [slasti.safestr(six.text_type(e)), "\r\n"]
+        return [slasti.safestr(six.text_type(e))+b"\r\n"]
     except AppGetError as e:
         start_response("405 Method Not Allowed",
                        [('Content-type', 'text/plain'), ('Allow', 'GET')])
-        return ["405 Method %s not allowed\r\n" %
+        return [b"405 Method %s not allowed\r\n" %
                 slasti.safestr(six.text_type(e))]
     except slasti.AppPostError as e:
         start_response("405 Method Not Allowed",
                        [('Content-type', 'text/plain'), ('Allow', 'POST')])
-        return ["405 Method %s not allowed\r\n" %
+        return [b"405 Method %s not allowed\r\n" %
                 slasti.safestr(six.text_type(e))]
     except slasti.AppGetPostError as e:
         start_response("405 Method Not Allowed",
                        [('Content-type', 'text/plain'),
                         ('Allow', 'GET, POST')])
-        return ["405 Method %s not allowed\r\n" %
+        return [b"405 Method %s not allowed\r\n" %
                 slasti.safestr(six.text_type(e))]
 
 # We do not have __main__ in WSGI.
