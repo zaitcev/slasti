@@ -51,12 +51,12 @@ class UserBase:
             if not (type(u) is types.DictType):
                 raise AppError("Configured user is not a dictionary {...}")
 
-            if not u.has_key('name'):
+            if 'name' not in u:
                 raise AppError("User with no name")
-            if not u.has_key('type'):
+            if 'type' not in u:
                 raise AppError("User with no type: "+u['name'])
             # Check 'root' for type 'fs' only in the future.
-            if not u.has_key('root'):
+            if 'root' not in u:
                 raise AppError("User with no root: "+u['name'])
 
     def lookup(self, name):
@@ -86,7 +86,7 @@ def do_root(environ, start_response):
 def do_user(environ, start_response, path):
     # We will stop reloading UserBase on every call once we figure out how.
     users = UserBase()
-    if not environ.has_key('slasti.userconf'):
+    if 'slasti.userconf' not in environ:
         raise AppError("No environ 'slasti.userconf'")
     users.open(environ['slasti.userconf'])
 

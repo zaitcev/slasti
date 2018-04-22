@@ -363,9 +363,9 @@ def login_post(start_response, ctx):
     # We do not require every user to have a password, in order to have
     # archive users or other pseudo-users. They cannot login, even if they
     # fake the login cookies.
-    if not ctx.user.has_key('salt'):
+    if 'salt' not in ctx.user:
         raise AppError("User with no salt: "+username)
-    if not ctx.user.has_key('pass'):
+    if 'pass' not in ctx.user:
         raise AppError("User with no password: "+username)
 
     pwhash = hashlib.md5()
@@ -406,11 +406,11 @@ def login(start_response, ctx):
     raise AppGetPostError(ctx.method)
 
 def login_verify(ctx):
-    if not ctx.user.has_key('pass'):
+    if 'pass' not in ctx.user:
         return 0
     if ctx.cookies == None:
         return 0
-    if not ctx.cookies.has_key('login'):
+    if 'login' not in ctx.cookies:
         return 0
 
     cval = ctx.cookies['login'].value
