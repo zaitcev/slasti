@@ -6,7 +6,6 @@
 #
 
 import json
-import types
 # import sys
 import six
 from six.moves import http_cookies
@@ -44,11 +43,11 @@ class UserBase:
         # sure that configuration makes sense structurally and that correct
         # fields are present. Using helpful ideas by Andrew "Pixy" Maizels.
 
-        if not (type(self.users) is types.ListType):
+        if not isinstance(self.users, list):
             raise AppError("Configuration is not a list [...]")
 
         for u in self.users:
-            if not (type(u) is types.DictType):
+            if not isinstance(u, dict):
                 raise AppError("Configured user is not a dictionary {...}")
 
             if 'name' not in u:
