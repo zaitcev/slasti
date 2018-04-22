@@ -5,6 +5,8 @@
 # See file COPYING for licensing information (expect GPL 2).
 #
 
+import sys
+import six
 from six.moves.urllib.parse import parse_qs, quote_plus
 
 
@@ -25,13 +27,16 @@ class AppGetPostError(Exception):
 
 
 def safestr(u):
-    if isinstance(u, unicode):
+    if isinstance(u, six.text_type):
         return u.encode('utf-8')
     return u
 
 def escapeURLComponent(s):
-    # Turn s into a bytes first, quote_plus blows up otherwise
-    return unicode(quote_plus(s.encode("utf-8")))
+    if sys.PY2:
+        # Turn s into a bytes first, quote_plus blows up otherwise
+        return quote_plus(s.encode('utf-8')).decode('utf-8')
+    else:
+        return quote_plus(s)
 
 def escapeURL(s):
     # quote_plus() doesn't work as it clobbers the :// portion of the URL

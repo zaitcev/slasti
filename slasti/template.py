@@ -6,10 +6,11 @@
 #
 
 from __future__ import print_function
-from slasti import escapeHTML
 import string
 import re
+import six
 
+from slasti import escapeHTML
 
 class LaxTemplate(string.Template):
     """string.Template with less strict placeholder syntax
@@ -29,6 +30,9 @@ class LaxTemplate(string.Template):
     )
     """
 
+    def substitute(self, d):
+        s = super(LaxTemplate, self).substitute(d)
+        return s.encode('utf-8')
 
 class DictWrapper:
     """dict wrapper class for fancier variable expansion in templates
@@ -68,7 +72,7 @@ class DictWrapper:
     def _enforce_encoding(self, s):
         # handle HTML escaping stuff here
         # character encoding is done on the finished expanded template
-        if isinstance(s, unicode) or isinstance(s, str):
+        if isinstance(s, six.string_types):
             return escapeHTML(s)
         # We end here for every list, such as "$tags". The contents get
         # later escaped above too, as they get looked up one by one.
@@ -114,7 +118,7 @@ class TemplateNodeBase(object):
             else:
                 # Should be some string, expand placeholders
                 output.append(LaxTemplate(child).substitute(d))
-        return ''.join(output)
+        return b''.join(output)
 
 
 class TemplateNodeRoot(TemplateNodeBase):
@@ -153,7 +157,7 @@ class Template:
         stack = [self.template_tree]
 
         for elem in self.template_list:
-            if isinstance(elem, str) or isinstance(elem, unicode):
+            if isinstance(elem, six.string_types):
                 stack[-1].children.append(elem)
             else:
                 sub = TemplateNodeElem(elem)
@@ -163,7 +167,7 @@ class Template:
         return self.template_tree.substitute(DictWrapper(d))
 
     def substitute(self, d):
-        return self.template_tree.substitute(DictWrapper(d)).encode("utf-8")
+        return self.template_tree.substitute(DictWrapper(d))
 
 class TemplateElemLoop:
     def __init__(self, loopvar_name, list_name, loop_body):
@@ -191,7 +195,7 @@ class TemplateElemLoop:
                 output.append(o)
             else:
                 output.append(self.body.substitute_2(new_d))
-        return ''.join(output)
+        return b''.join(output)
 
     def substitute(self, d):
         # never happens?
@@ -215,7 +219,7 @@ class TemplateElemCond:
             val = None
         body = self.t_body if val else self.f_body
         if not body:
-            return ""
+            return b""
         if isinstance(body, str):
             return LaxTemplate(body).substitute(d)
         return body.substitute_2(d)

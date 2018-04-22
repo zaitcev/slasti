@@ -297,11 +297,11 @@ class MarkDumper(object):
     def __iter__(self):
         self.base.open()
         try:
-            yield '<?xml version="1.0" encoding="UTF-8"?>\n'
-            yield '<posts user="'+slasti.safestr(self.username)+'" tag="">\n'
+            yield b'<?xml version="1.0" encoding="UTF-8"?>\n'
+            yield b'<posts user="'+slasti.safestr(self.username)+b'" tag="">\n'
             for mark in self.base:
                 yield slasti.safestr(mark.xml())
-            yield '</posts>\n'
+            yield b'</posts>\n'
         finally:
             self.base.close()
 

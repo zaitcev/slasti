@@ -40,14 +40,14 @@ class TestUnit(unittest.TestCase):
         # outputs literally byte by byte and flag if mismatch.
         # BTW, we use
         export_master = \
-            '<?xml version="1.0" encoding="UTF-8"?>\n' +\
-            '<posts user="auser" tag="">\n' +\
-            '  <post href="http://xxxx" description="moo" ' +\
-                 'tag="a b c" time="2012-09-21T15:47:13Z" extended="" />\n' +\
-            '  <post href="http://pant.su" description="\xd0\xbf\xd1\x80' +\
-                 '\xd0\xbe\xd0\xb2\xd0\xb5\xd1\x80\xd0\xba\xd0\xb0" ' +\
-                 'tag="pantsu" time="2012-09-21T15:47:11Z" extended="" />\n' +\
-            '</posts>\n'
+            b'<?xml version="1.0" encoding="UTF-8"?>\n' +\
+            b'<posts user="auser" tag="">\n' +\
+            b'  <post href="http://xxxx" description="moo" ' +\
+                b'tag="a b c" time="2012-09-21T15:47:13Z" extended="" />\n' +\
+            b'  <post href="http://pant.su" description="\xd0\xbf\xd1\x80' +\
+                b'\xd0\xbe\xd0\xb2\xd0\xb5\xd1\x80\xd0\xba\xd0\xb0" ' +\
+                b'tag="pantsu" time="2012-09-21T15:47:11Z" extended="" />\n' +\
+            b'</posts>\n'
         # Use base itself to populate it.
         base.open()
         for ms in base_sample:
@@ -62,7 +62,7 @@ class TestUnit(unittest.TestCase):
         #  =>  ctx.flogin = login_verify(ctx)
         output = slasti.main.full_mark_xml(start_resp, ctx)
 
-        export_str = ""
+        export_str = b""
         for chunk in output:
             export_str += chunk
         self.assertEquals(export_str, export_master)

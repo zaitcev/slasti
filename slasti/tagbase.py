@@ -27,7 +27,7 @@ import slasti
 # The only way is to avoid UTF-8 filenames entirely.
 
 def fs_encode(tag):
-    return base64.b64encode(slasti.safestr(tag), "+_")
+    return base64.b64encode(slasti.safestr(tag), b"+_").decode('ascii')
 
 def fs_decode(tag):
     # XXX try TypeError -- and then what?
@@ -39,12 +39,6 @@ def fs_decode(tag):
 def fs_decode_list(names):
     ret = []
     for s in names:
-        # Encoding with ascii? Why, yes. In F15, listdir returns unicode
-        # strings, but b64decode blows up on them (deep in .translate()
-        # not having the right table). Force back into str. They are base64
-        # encoded, so 'ascii' is appropriate.
-        if isinstance(s, unicode):
-            s = s.encode('ascii')
         ret.append(fs_decode(s))
     return ret
 
@@ -271,7 +265,7 @@ class TagMark:
         ts = time.gmtime(self.stamp0)
         # XXX common constructor with create_jsondict, please
         jsondict = {
-            "date": unicode(time.strftime("%Y-%m-%d", ts)),
+            "date": time.strftime("%Y-%m-%d", ts).decode('utf-8'),
             "href_mark": mark_url,
             "href_mark_url": slasti.escapeURL(self.url),
             "title": title,
@@ -327,6 +321,9 @@ class TagMarkCursor:
         mark = TagMark(self.base, None, self.dlist, self.index)
         self.index += 1
         return mark
+
+    # py3
+    __next__ = next
 
     # def __del__(self):
     #     ......
@@ -425,7 +422,7 @@ class TagBase:
     # Store the mark body
     def store(self, markname, stampkey, title, url, note, tags):
         try:
-            f = open(self.markdir+"/"+markname, "w+")
+            f = open(self.markdir+"/"+markname, "wb+")
         except IOError as e:
             raise AppError(str(e))
 
