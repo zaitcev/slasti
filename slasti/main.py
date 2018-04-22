@@ -369,7 +369,7 @@ def login_post(start_response, ctx):
         raise AppError("User with no password: "+username)
 
     pwhash = hashlib.md5()
-    pwhash.update(ctx.user['salt']+password)
+    pwhash.update((ctx.user['salt']+password).encode('utf-8'))
     pwstr = pwhash.hexdigest()
 
     # We operate on a hex of the salted password's digest, to avoid parsing.
@@ -385,7 +385,7 @@ def login_post(start_response, ctx):
     opdata = csalt+","+flags+","+nowstr
 
     coohash = hashlib.sha256()
-    coohash.update(ctx.user['pass']+opdata)
+    coohash.update((ctx.user['pass']+opdata).encode('utf-8'))
     # We use hex instead of base64 because it's easy to test in shell.
     mdstr = coohash.hexdigest()
 
@@ -427,7 +427,7 @@ def login_verify(ctx):
         return 0
 
     coohash = hashlib.sha256()
-    coohash.update(ctx.user['pass']+opdata)
+    coohash.update((ctx.user['pass']+opdata).encode('utf-8'))
     mdstr = coohash.hexdigest()
 
     if mdstr != xhash:
