@@ -223,8 +223,7 @@ class TagMark:
         # There do not seem to be any exceptions raised with weird inputs.
         datestr = time.strftime("%Y-%m-%d", time.gmtime(self.stamp0))
         return self.ourlist[self.ourindex]+'|'+datestr+'|'+\
-               slasti.safestr(self.title)+'|'+self.url+'|'+\
-               slasti.safestr(self.note)+"|"+slasti.safestr(self.tags)
+               self.title+'|'+self.url+'|'+self.note+'|'+self.tags
 
     def key(self):
         return (self.stamp0, self.stamp1)
@@ -265,7 +264,7 @@ class TagMark:
         ts = time.gmtime(self.stamp0)
         # XXX common constructor with create_jsondict, please
         jsondict = {
-            "date": time.strftime("%Y-%m-%d", ts).decode('utf-8'),
+            "date": time.strftime("%Y-%m-%d", ts),
             "href_mark": mark_url,
             "href_mark_url": slasti.escapeURL(self.url),
             "title": title,
