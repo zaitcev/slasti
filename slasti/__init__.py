@@ -5,7 +5,6 @@
 # See file COPYING for licensing information (expect GPL 2).
 #
 
-import sys
 import six
 from six.moves.urllib.parse import parse_qs, quote_plus
 
@@ -32,7 +31,7 @@ def safestr(u):
     return u
 
 def escapeURLComponent(s):
-    if sys.PY2:
+    if six.PY2:
         # Turn s into a bytes first, quote_plus blows up otherwise
         return quote_plus(s.encode('utf-8')).decode('utf-8')
     else:
