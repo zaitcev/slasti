@@ -362,6 +362,9 @@ class TagTagCursor:
         self.index += 1
         return tag
 
+    # py3
+    __next__ = next
+
 #
 # The open database (any back-end in theory, hardcoded to files for now)
 # XXX files are very inefficient: 870 bookmarks from a 280 KB XML take 6 MB.
