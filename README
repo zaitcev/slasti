@@ -5,7 +5,6 @@ TODO:
  - 2015 - bug - Preload hangs the whole server often
  - add Kris' nonce
  - port to Jinja2 templates
- - port to Python 3
  - redo filesystem-based tagbase format with an index, /tags take too long
  - search, aggregate in tags page - for tablets with poor ^F
  - invoke del2sla from an upload form
