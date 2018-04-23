@@ -167,7 +167,19 @@ def application(environ, start_response):
     # os.environ["HOME"] = pwd.getpwuid(os.getuid()).pw_dir
 
     path = environ['PATH_INFO']
-    if isinstance(path, six.binary_type):
+    if six.PY2:
+        if isinstance(path, basestring) and not isinstance(path, unicode):
+            try:
+                path = unicode(path, 'utf-8')
+            except UnicodeDecodeError:
+                start_response("400 Bad Request",
+                               [('Content-type', 'text/plain')])
+                return ["400 Unable to decode UTF-8 in path\r\n"]
+    else:
+        # Graham Dumpleton talks about wsgi.path_info and wsgi.uri_encoding,
+        # but none of them actually exist: it's identity encoding for the URL
+        # and nothing else.
+        path = path.encode('latin-1')
         try:
             path = path.decode('utf-8')
         except UnicodeDecodeError:
