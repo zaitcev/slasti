@@ -122,7 +122,7 @@ def difftags(old, new):
     for s in new:
         joint.append([slasti.safestr(s),s,'+'])
 
-    joint.sort(None, lambda t: t[0])
+    joint.sort(key = lambda t: t[0])
 
     prev = None
     for s in joint:

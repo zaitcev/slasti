@@ -6,6 +6,19 @@ import slasti
 
 class TestUnit(unittest.TestCase):
 
+    def test_difftags(self):
+        old = ["tmp", "test"]
+        new = ["tmp", "test", "new"]
+        res = slasti.tagbase.difftags(old, new)
+        self.assertEqual(res[0], [])
+        self.assertEqual(res[1], ["new"])
+
+        old = ["tmp", "test"]
+        new = ["test"]
+        res = slasti.tagbase.difftags(old, new)
+        self.assertEqual(res[0], ["tmp"])
+        self.assertEqual(res[1], [])
+
     def test_export(self):
 
         capt_status = None
@@ -65,7 +78,7 @@ class TestUnit(unittest.TestCase):
         export_str = b""
         for chunk in output:
             export_str += chunk
-        self.assertEquals(export_str, export_master)
+        self.assertEqual(export_str, export_master)
 
         shutil.rmtree(base_dir)
 
