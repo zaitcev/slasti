@@ -140,9 +140,13 @@ class Context:
         if args is None:
             return {}
 
+        # The decoding here prevents keys in qdic to come out binary.
+        if isinstance(args, six.binary_type):
+            args = args.decode('utf-8', 'replace')
+
         qdic = parse_qs(args)
         for key in qdic:
-            qdic[key] = qdic[key][0].decode("utf-8", 'replace')
+            qdic[key] = qdic[key][0]
 
         return qdic
 

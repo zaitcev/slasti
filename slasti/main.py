@@ -170,7 +170,11 @@ def fetch_body(url):
     else:
         conn = http_client.HTTPSConnection(host, timeout=25)
 
-    fullpath = urlunsplit((None, None, path, u_query, None))
+    # Unfortunately, passing a scheme of None blows up in py3 when coercing
+    # the arguments of urlunsplit(): None is mistaken for bytes (not an str).
+    # fullpath = urlunsplit((None, None, path, u_query, None))
+    fullpath = path + '?' + u_query if u_query else path
+
     conn.request("GET", fullpath, None, headers)
     response = conn.getresponse()
     # XXX A different return code for 201 and 204?
@@ -392,7 +396,7 @@ def login_post(start_response, ctx):
     response_headers = [('Content-type', 'text/html; charset=utf-8')]
     # Set an RFC 2901 cookie (not RFC 2965).
     response_headers.append(('Set-Cookie', "login=%s:%s" % (opdata, mdstr)))
-    response_headers.append(('Location', slasti.safestr(redihref)))
+    response_headers.append(('Location', redihref))
     start_response("303 See Other", response_headers)
 
     jsondict = { "href_redir": redihref }
@@ -500,7 +504,7 @@ def edit_post(start_response, ctx):
     redihref = '%s/mark.%d.%02d' % (userpath, stamp0, stamp1)
 
     response_headers = [('Content-type', 'text/html; charset=utf-8')]
-    response_headers.append(('Location', slasti.safestr(redihref)))
+    response_headers.append(('Location', redihref))
     start_response("303 See Other", response_headers)
 
     jsondict = { "href_redir": redihref }
@@ -533,7 +537,7 @@ def redirect_to_login(start_response, ctx):
     thisref = ctx.path
     login_loc = userpath + '/login?savedref=' + thisref
     response_headers = [('Content-type', 'text/html; charset=utf-8')]
-    response_headers.append(('Location', slasti.safestr(login_loc)))
+    response_headers.append(('Location', login_loc))
     start_response("303 See Other", response_headers)
 
     jsondict = { "href_redir": login_loc }
