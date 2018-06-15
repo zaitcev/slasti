@@ -4,6 +4,8 @@ import unittest
 
 import slasti
 
+import six
+
 class TestUnit(unittest.TestCase):
 
     def test_difftags(self):
@@ -101,3 +103,138 @@ class TestUnit(unittest.TestCase):
         """
         title2 = slasti.main.fetch_parse(html2)
         self.assertEquals(u'The Online Comic \xa91999-2010 Greg Dean', title2)
+
+    def test_ctx_parse_args(self):
+
+        ctx = slasti.Context(
+            None, None, None, 'GET', 'http', None, None, None, None, None)
+
+        qd = ctx._parse_args(b"savedref=\xe6\x97\xa5\xe6\x9c\xac\xe8\xaa\x9e*")
+        self.assertEqual(qd['savedref'], u'\u65e5\u672c\u8a9e*')
+
+        qd = ctx._parse_args(u"savedref=\u65e5\u672c\u8a9e*")
+        self.assertEqual(qd['savedref'], u'\u65e5\u672c\u8a9e*')
+
+        qd = ctx._parse_args(b"savedref=%E6%97%A5%E6%9C%AC%E8%AA%9E")
+        self.assertEqual(qd['savedref'], u'\u65e5\u672c\u8a9e')
+
+        qd = ctx._parse_args(u"savedref=%E6%97%A5%E6%9C%AC%E8%AA%9E")
+        self.assertEqual(qd['savedref'], u'\u65e5\u672c\u8a9e')
+
+    def test_login_form(self):
+
+        # user_password = "PassWord"
+        user_entry = {
+            "name": "testuser",
+            "type": "fs", "root": "/missing",
+            "salt": "abcdef",
+            "pass": "8bb4b4f91dcfafbfea438ae0132bbd20" }
+
+        status_ = [None]
+        headers_ = [None]
+
+        def fake_start_response(status, headers):
+            status_[0] = status
+            headers_[0] = headers
+
+        ctx = slasti.Context(
+            "", user_entry, None,
+            'GET', 'http', "localhost:8080", b"/testuser/login",
+            b"savedref=\xe6\x97\xa5\xe6\x9c\xac\xe8\xaa\x9e",
+            None, None)
+        result_ = slasti.main.login_form(fake_start_response, ctx)
+
+        self.assertTrue(status_[0].startswith("200 "))
+        for chunk in result_:
+            self.assertTrue(isinstance(chunk, six.binary_type))
+        body = b''.join(result_)
+        # Strictly speaking, we should be parsing the HTML, but it takes
+        # too much work and adds dependencies.
+        self.assertIn(
+            b'<input name=savedref type=hidden '
+            b'value="\xe6\x97\xa5\xe6\x9c\xac\xe8\xaa\x9e" />',
+            body)
+
+        status_[0] = None
+        headers_[0] = None
+
+        ctx = slasti.Context(
+            "", user_entry, None,
+            'GET', 'http', "localhost:8080", b"/testuser/login",
+            u"savedref=\u65e5\u672c\u8a9e",
+            None, None)
+        result_ = slasti.main.login_form(fake_start_response, ctx)
+
+        self.assertTrue(status_[0].startswith("200 "))
+        for chunk in result_:
+            self.assertTrue(isinstance(chunk, six.binary_type))
+        body = b''.join(result_)
+        self.assertIn(
+            b'<input name=savedref type=hidden '
+            b'value="\xe6\x97\xa5\xe6\x9c\xac\xe8\xaa\x9e" />',
+            body)
+
+    def test_login_post(self):
+
+        # user_password = "PassWord"
+        user_entry = {
+            "name": "testuser",
+            "type": "fs", "root": "/missing",
+            "salt": "abcdef",
+            "pass": "8bb4b4f91dcfafbfea438ae0132bbd20" }
+
+        status_ = [None]
+        headers_ = [None]
+
+        def fake_start_response(status, headers):
+            status_[0] = status
+            headers_[0] = headers
+
+        ctx = slasti.Context(
+            "", user_entry, None,
+            'POST', 'http', "localhost:8080", b"/testuser/login", "",
+            u'password=PassWord&OK=Enter&savedref=\u30c6\u30b9\u30c8', None)
+        result_ = slasti.main.login_post(fake_start_response, ctx)
+
+        self.assertTrue(status_[0].startswith("303 "))
+
+        headers = dict()
+        for t in headers_[0]:
+            headers[t[0]] = t[1]
+        self.assertTrue(isinstance(headers['Set-Cookie'], str))
+        self.assertIn('login=', headers['Set-Cookie'])
+        # Look for "b'str'" in order to catch a stray str(b'str') on py3.
+        self.assertNotIn("b'", headers['Set-Cookie'])
+        self.assertTrue(isinstance(headers['Location'], str))
+        self.assertEquals(headers['Location'],
+                          '/testuser/%E3%83%86%E3%82%B9%E3%83%88')
+
+        for chunk in result_:
+            self.assertTrue(isinstance(chunk, six.binary_type))
+
+        # Exactly same as the above, only with unicode injected, for py2.
+
+        status_[0] = None
+        headers_[0] = None
+
+        ctx = slasti.Context(
+            u"", user_entry, None,
+            'POST', 'http', "localhost:8080", u"/testuser/login", "",
+            u'password=PassWord&OK=Enter&savedref=\u30c6\u30b9\u30c8', None)
+        result_ = slasti.main.login_post(fake_start_response, ctx)
+
+        self.assertTrue(status_[0].startswith("303 "))
+
+        headers = dict()
+        for t in headers_[0]:
+            headers[t[0]] = t[1]
+        self.assertTrue(isinstance(headers['Set-Cookie'], str))
+        self.assertIn('login=', headers['Set-Cookie'])
+        # Look for "b'str'" in order to catch a stray str(b'str') on py3.
+        self.assertNotIn("b'", headers['Set-Cookie'])
+        self.assertTrue(isinstance(headers['Location'], str))
+        self.assertEquals(headers['Location'],
+                          '/testuser/%E3%83%86%E3%82%B9%E3%83%88')
+
+        for chunk in result_:
+            self.assertTrue(isinstance(chunk, six.binary_type))

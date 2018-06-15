@@ -15,6 +15,7 @@ import errno
 import time
 import cgi
 import base64
+import six
 
 from slasti import AppError
 import slasti
@@ -31,7 +32,7 @@ def fs_encode(tag):
 
 def fs_decode(tag):
     # XXX try TypeError -- and then what?
-    s = base64.b64decode(tag, "+_")
+    s = base64.b64decode(tag, b"+_")
     # XXX try UnicodeDecodeError -- and then what?
     u = s.decode('utf-8')
     return u
@@ -39,6 +40,12 @@ def fs_decode(tag):
 def fs_decode_list(names):
     ret = []
     for s in names:
+        # Encoding with ascii? Why, yes. In F15, listdir returns unicode
+        # strings, but b64decode blows up on them (deep in .translate()
+        # not having the right table). Force back into str. They are base64
+        # encoded, so 'ascii' is appropriate.
+        if isinstance(s, six.string_types):
+            s = s.encode('ascii')
         ret.append(fs_decode(s))
     return ret
 

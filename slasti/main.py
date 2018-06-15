@@ -13,7 +13,7 @@ import os
 import hashlib
 
 from six.moves import http_client
-from six.moves.urllib.parse import urlsplit, urlunsplit
+from six.moves.urllib.parse import quote, urlsplit
 
 from slasti import AppError, App400Error, AppLoginError, App404Error
 from slasti import AppGetError, AppGetPostError
@@ -356,9 +356,11 @@ def login_post(start_response, ctx):
     # pinput = "password=test&OK=Enter" and possibly a newline
     savedref = ctx.get_pinput_arg("savedref")
     if savedref:
-        redihref = "%s/%s" % (userpath, savedref)
+        redihref = "%s/%s" % (userpath,
+                              quote(slasti.safestr(savedref)))
     else:
         redihref = "%s/" % userpath;
+    redihref = slasti.to_str(redihref)
 
     password = ctx.get_pinput_arg("password")
     if not password:
@@ -383,7 +385,7 @@ def login_post(start_response, ctx):
         jsondict = { "output": "403 Not Permitted: Bad Password\r\n" }
         return [template_simple_output.substitute(jsondict)]
 
-    csalt = base64.b64encode(os.urandom(6))
+    csalt = slasti.to_str(base64.b64encode(os.urandom(6)))
     flags = "-"
     nowstr = "%d" % int(time.time())
     opdata = csalt+","+flags+","+nowstr
@@ -501,7 +503,7 @@ def edit_post(start_response, ctx):
     if stamp1 < 0:
         raise App404Error("Out of fix: %d" % stamp0)
 
-    redihref = '%s/mark.%d.%02d' % (userpath, stamp0, stamp1)
+    redihref = slasti.to_str('%s/mark.%d.%02d' % (userpath, stamp0, stamp1))
 
     response_headers = [('Content-type', 'text/html; charset=utf-8')]
     response_headers.append(('Location', redihref))
@@ -535,7 +537,8 @@ def fetch_title(start_response, ctx):
 def redirect_to_login(start_response, ctx):
     userpath = ctx.prefix + '/' + ctx.user['name']
     thisref = ctx.path
-    login_loc = userpath + '/login?savedref=' + thisref
+    login_loc = slasti.to_str(
+        userpath + '/login?savedref=' + quote(slasti.safestr(thisref)))
     response_headers = [('Content-type', 'text/html; charset=utf-8')]
     response_headers.append(('Location', login_loc))
     start_response("303 See Other", response_headers)

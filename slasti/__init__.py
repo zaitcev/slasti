@@ -6,7 +6,7 @@
 #
 
 import six
-from six.moves.urllib.parse import parse_qs, quote_plus
+from six.moves.urllib.parse import parse_qs, quote, quote_plus
 
 
 class AppError(Exception):
@@ -30,6 +30,22 @@ def safestr(u):
         return u.encode('utf-8')
     return u
 
+# The to_str() is used to coerce header fields, in case their encoding
+# is known correct (meaning, ASCII already -- either base64 or UTF-8+URL).
+# The WSGI platform insists they to be str, both on py2 and py3, but we
+# may end with either unicode on py2, or bytes on py3. The former happens
+# because request headers are upconverted to unicode and then leak through.
+# The latter happens because hash, base64, or other libraries insist on
+# outputting bytes. Unfortunately, we cannot simply do str(s), because
+# that yeilds "b's'".
+def to_str(s):
+    if not isinstance(s, str):
+        if isinstance(s, six.text_type):
+            s = s.encode('ascii')
+        else:
+            s = s.decode('ascii')
+    return s
+
 def escapeURLComponent(s):
     if six.PY2:
         # Turn s into a bytes first, quote_plus blows up otherwise
@@ -41,7 +57,7 @@ def escapeURL(s):
     # quote_plus() doesn't work as it clobbers the :// portion of the URL
     # Make sure the resulting string is safe to use within HTML attributes.
     # N.B. Mooneyspace.com hates when we reaplace '&' with %26, so don't.
-    # On output, the remaining & will be turned into &quot; by the templating
+    # On output, the remaining & will be turned into &amp; by the templating
     # engine. No unescaped-entity problems should result here.
     s = s.replace('"', '%22')
     s = s.replace("'", '%27')
@@ -81,7 +97,7 @@ class Context:
                  query, pinput, coos):
         # prefix: Path where the application is mounted in WSGI or empty string.
         self.prefix = pfx
-        # user: Username.
+        # user: User entry.
         self.user = user
         # base: The open tag database for the user.
         self.base = base
@@ -140,13 +156,25 @@ class Context:
         if args is None:
             return {}
 
-        # The decoding here prevents keys in qdic to come out binary.
-        if isinstance(args, six.binary_type):
-            args = args.decode('utf-8', 'replace')
+        # The parse_qs() will parse %-escapes incorrectly if in unicode, but
+        # naked UTF-8 makes it blow up on py3. Solution: first make everything
+        # bytes, then %-encode all 8-bit characters, while leaving all the
+        # relevant syntax alone.
+        if isinstance(args, six.text_type):
+            args = args.encode('utf-8')
+        args = quote(args, '%&=+')
 
-        qdic = parse_qs(args)
-        for key in qdic:
-            qdic[key] = qdic[key][0]
+        qdic = dict()
+        qdic_ = parse_qs(args)
+        for key in qdic_:
+            val = qdic_[key][0]
+
+            key = to_str(key)
+
+            if isinstance(val, six.binary_type):
+                val = val.decode('utf-8', 'replace')
+
+            qdic[key] = val
 
         return qdic
 
