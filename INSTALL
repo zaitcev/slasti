@@ -3,7 +3,7 @@
 Slasti works through WSGI interface to a webserver, so mod_wsgi is typically
 employed. See INSTALL.mod_wsgi for specifics. It also needs Python 2.7 or
 a Python 3 (3.5 okay). No database is used. The Beautiful Soup (bs4) is used
-for form pre-fill.
+for form pre-fill. The Jinja2 (jinja2) is used for templates.
 
 = passwords
 
@@ -37,6 +37,10 @@ being searched. Meanwhile, configure Apache like you would for any
 SSL-enabled service, then always use https:// schema.
 
 = pre-loading from XML
+
+This is mostly used to import from Del.icio.us. But it's the same XML
+that Slasti exports for backups, so it can be useful in case of disaster
+recovery too.
 
 cd /var/www/slasti
 mkdir user

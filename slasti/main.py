@@ -12,6 +12,8 @@ import base64
 import os
 import hashlib
 
+from jinja2 import Environment, DictLoader
+
 from six.moves import http_client
 from six.moves.urllib.parse import quote, urlsplit
 
@@ -350,6 +352,12 @@ def login_form(start_response, ctx):
     return [template_html_login.substitute(jsondict)]
 
 def login_post(start_response, ctx):
+    # XXX Setting an Environment should be done somewhere global, right?
+    # XXX also add this:
+    # autoescape=select_autoescape(['html', 'xml'])
+    j2env = Environment(
+        loader=DictLoader(templates))
+
     username = ctx.user['name']
     userpath = ctx.prefix+'/'+username
 
@@ -382,8 +390,9 @@ def login_post(start_response, ctx):
     if pwstr != ctx.user['pass']:
         start_response("403 Not Permitted",
                       [('Content-type', 'text/plain; charset=utf-8')])
-        jsondict = { "output": "403 Not Permitted: Bad Password\r\n" }
-        return [template_simple_output.substitute(jsondict)]
+        template = j2env.get_template('simple_output')
+        result = template.render(output="403 Not Permitted: Bad Password\r\n")
+        return [result.encode('utf-8')]
 
     csalt = slasti.to_str(base64.b64encode(os.urandom(6)))
     flags = "-"
@@ -818,4 +827,8 @@ template_html_editform = Template(
     </body></html>
 """)
 
-template_simple_output = Template("""$output""")
+template_simple_output = """{{ output }}"""
+
+templates = {
+    'simple_output': template_simple_output
+}
