@@ -190,6 +190,36 @@ class TestUnit(unittest.TestCase):
             status_[0] = status
             headers_[0] = headers
 
+        # First attempt is a bad password.
+        # Note that the empty password throws a 400.
+
+        ctx = slasti.Context(
+            "", user_entry, None,
+            'POST', 'http', "localhost:8080", b"/testuser/login", "",
+            u'password=X&OK=Enter&savedref=test', None)
+        result_ = slasti.main.login_post(fake_start_response, ctx)
+
+        self.assertTrue(status_[0].startswith("403 "))
+
+        headers = dict()
+        for t in headers_[0]:
+            headers[t[0]] = t[1]
+        self.assertTrue(isinstance(headers['Content-type'], str))
+        self.assertEquals(headers['Content-type'],
+                          'text/plain; charset=utf-8')
+
+        for chunk in result_:
+            self.assertTrue(isinstance(chunk, six.binary_type))
+        body = b''.join(result_)
+        self.assertEqual(
+            b'403 Not Permitted: Bad Password\r\n',
+            body)
+
+        # Let's try to log in now.
+
+        status_ = [None]
+        headers_ = [None]
+
         ctx = slasti.Context(
             "", user_entry, None,
             'POST', 'http', "localhost:8080", b"/testuser/login", "",
