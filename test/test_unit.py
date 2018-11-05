@@ -1,3 +1,4 @@
+import bs4
 import shutil
 import tempfile
 import unittest
@@ -148,12 +149,17 @@ class TestUnit(unittest.TestCase):
         for chunk in result_:
             self.assertTrue(isinstance(chunk, six.binary_type))
         body = b''.join(result_)
-        # Strictly speaking, we should be parsing the HTML, but it takes
-        # too much work and adds dependencies.
-        self.assertIn(
-            b'<input name=savedref type=hidden '
-            b'value="\xe6\x97\xa5\xe6\x9c\xac\xe8\xaa\x9e" />',
-            body)
+        soup = bs4.BeautifulSoup(body, "lxml")
+        soup_savedref = None
+        for inp in soup.body.form.select('input'):
+            if inp['name'] == 'savedref':
+                soup_savedref = inp
+        self.assertIsNotNone(soup_savedref)
+        self.assertEqual(soup_savedref['type'], 'hidden')
+        # The actual value is b"\xe6\x97\xa5\xe6\x9c\xac\xe8\xaa\x9e", but
+        # bs4 auto-converts what it parses to Unicode, using UTF-8 magically.
+        # Well, we do have UTF-8 marker in <head> meta.
+        self.assertEqual(soup_savedref['value'], u'\u65e5\u672c\u8a9e')
 
         status_[0] = None
         headers_[0] = None
@@ -169,10 +175,14 @@ class TestUnit(unittest.TestCase):
         for chunk in result_:
             self.assertTrue(isinstance(chunk, six.binary_type))
         body = b''.join(result_)
-        self.assertIn(
-            b'<input name=savedref type=hidden '
-            b'value="\xe6\x97\xa5\xe6\x9c\xac\xe8\xaa\x9e" />',
-            body)
+        soup = bs4.BeautifulSoup(body, "lxml")
+        soup_savedref = None
+        for inp in soup.body.form.select('input'):
+            if inp['name'] == 'savedref':
+                soup_savedref = inp
+        self.assertIsNotNone(soup_savedref)
+        self.assertEqual(soup_savedref['type'], 'hidden')
+        self.assertEqual(soup_savedref['value'], u'\u65e5\u672c\u8a9e')
 
     def test_login_post(self):
 
