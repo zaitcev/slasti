@@ -1,11 +1,63 @@
 import bs4
 import shutil
 import tempfile
+import time
 import unittest
 
 import slasti
 
 import six
+
+
+class FakeMark(object):
+
+    def __init__(self, stamp0):
+        self._stamp0 = stamp0
+
+    def key(self):
+        return (self._stamp0, 0)
+
+    def get_editpath(self, path):
+        return '%s/edit?mark=0.0' % (path,)
+
+    def to_jsondict(self, path):
+        tag1 = 'test_tag'
+
+        tags = [
+            {"href_tag": '%s/%s/' % (path, slasti.escapeURLComponent(tag1)),
+             "name_tag": tag1}
+        ]
+
+        jsondict = {
+            "date": time.strftime("%Y-%m-%d", time.gmtime(self._stamp0)),
+            "href_mark": '%s/mark.%d.%02d' % (path, self._stamp0, 0),
+            "href_mark_url": slasti.escapeURL("http://www.ibm.com/"),
+            "title": "Test_title",
+            "note": "",
+            "tags": tags,
+            "key": "%d.%02d" % (self._stamp0, 0),
+        }
+        return jsondict
+
+    def succ(self):
+        return None
+
+    def pred(self):
+        return None
+
+
+class FakeBase(object):
+
+    def __init__(self, time0=None):
+        self._time0 = time0
+
+    def lookup(self, timeint, fix):
+        if fix != 0:
+            return None
+        if timeint != self._time0:
+            return None
+        return FakeMark(timeint)
+
 
 class TestUnit(unittest.TestCase):
 
@@ -140,7 +192,7 @@ class TestUnit(unittest.TestCase):
 
         ctx = slasti.Context(
             "", user_entry, None,
-            'GET', 'http', "localhost:8080", b"/testuser/login",
+            'GET', 'http', "localhost:8080", u"/testuser/login",
             b"savedref=\xe6\x97\xa5\xe6\x9c\xac\xe8\xaa\x9e",
             None, None)
         result_ = slasti.main.login_form(fake_start_response, ctx)
@@ -166,7 +218,7 @@ class TestUnit(unittest.TestCase):
 
         ctx = slasti.Context(
             "", user_entry, None,
-            'GET', 'http', "localhost:8080", b"/testuser/login",
+            'GET', 'http', "localhost:8080", u"/testuser/login",
             u"savedref=\u65e5\u672c\u8a9e",
             None, None)
         result_ = slasti.main.login_form(fake_start_response, ctx)
@@ -205,7 +257,7 @@ class TestUnit(unittest.TestCase):
 
         ctx = slasti.Context(
             "", user_entry, None,
-            'POST', 'http', "localhost:8080", b"/testuser/login", "",
+            'POST', 'http', "localhost:8080", u"/testuser/login", "",
             u'password=X&OK=Enter&savedref=test', None)
         result_ = slasti.main.login_post(fake_start_response, ctx)
 
@@ -232,7 +284,7 @@ class TestUnit(unittest.TestCase):
 
         ctx = slasti.Context(
             "", user_entry, None,
-            'POST', 'http', "localhost:8080", b"/testuser/login", "",
+            'POST', 'http', "localhost:8080", u"/testuser/login", "",
             u'password=PassWord&OK=Enter&savedref=\u30c6\u30b9\u30c8', None)
         result_ = slasti.main.login_post(fake_start_response, ctx)
 
@@ -278,3 +330,51 @@ class TestUnit(unittest.TestCase):
 
         for chunk in result_:
             self.assertTrue(isinstance(chunk, six.binary_type))
+
+    def test_get_mark(self):
+
+        stamp0 = 1524461179
+
+        # user_password = "PassWord"
+        user_entry = {
+            "name": "testuser",
+            "type": "fs", "root": "/missing",
+            "salt": "abcdef",
+            "pass": "8bb4b4f91dcfafbfea438ae0132bbd20" }
+
+        base = FakeBase(time0=stamp0)
+
+        status_ = [None]
+        headers_ = [None]
+
+        def fake_start_response(status, headers):
+            status_[0] = status
+            headers_[0] = headers
+
+        ctx = slasti.Context(
+            "", user_entry, base,
+            'GET', 'http', "localhost:8080",
+            u"/testuser/mark.%d.00" % (stamp0,),
+            None, None, None)
+        result_ = slasti.main.one_mark_html(
+            fake_start_response, ctx, stamp0, 0)
+
+        self.assertTrue(status_[0].startswith("200 "))
+        for chunk in result_:
+            self.assertTrue(isinstance(chunk, six.binary_type))
+        body = b''.join(result_)
+        soup = bs4.BeautifulSoup(body, "lxml")
+
+        # The body of the mark is just a naked list of <a> tags in a single
+        # bulk <p>. So, all the can do is test if expected <a> are present.
+        a_result = dict((a['href'], a.string) for a in soup.select('a'))
+
+        a_pattern = {
+            '/testuser/login?savedref=/testuser/mark.%d.00' % stamp0: 'login',
+            '/testuser/tags': 'tags',
+            '/testuser/test_tag/': 'test_tag',
+            '/testuser/mark.%d.00' % stamp0: u'\u2606'}
+
+        for k in a_pattern:
+            self.assertIn(k, a_result)
+            self.assertEqual(a_result[k], a_pattern[k])
