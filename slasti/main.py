@@ -6,11 +6,11 @@
 # See file COPYING for licensing information (expect GPL 2).
 #
 
-import bs4
-import time
 import base64
-import os
+import bs4
 import hashlib
+import os
+import time
 
 from jinja2 import Environment, DictLoader
 
