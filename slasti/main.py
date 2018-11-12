@@ -41,6 +41,12 @@ def page_back(mark):
         n += 1
     return mark
 
+# This is supposed to be a workaround while we're transitioning to Jinja2,
+# and have to maintain the jsondict API. What the old templates referred
+# as mark.foo, the new Jinja2 templates refer as mark__foo.
+def flatten_jsondict(prefix, jsondict):
+    return {'%s__%s' % (prefix, k): v for (k, v) in jsondict.items()}
+
 def page_anchor_html(mark, path, text):
     if mark == None:
         return '-'
@@ -228,18 +234,23 @@ def mark_post(start_response, ctx, mark):
     return mark_get(start_response, ctx, mark, stamp0)
 
 def mark_get(start_response, ctx, mark, stamp0):
+    j2env = Environment(loader=DictLoader(templates))
+
     path = ctx.prefix+'/'+ctx.user['name']
 
     start_response("200 OK", [('Content-type', 'text/html; charset=utf-8')])
     jsondict = ctx.create_jsondict()
     jsondict.update({
-                "mark": mark.to_jsondict(path),
                 "href_edit": mark.get_editpath(path),
                 "_page_prev": mark_anchor_html(mark.pred(), path, "&laquo;"),
                 "_page_this": mark_anchor_html(mark,        path, WHITESTAR),
                 "_page_next": mark_anchor_html(mark.succ(), path, "&raquo;")
                })
-    return [template_html_mark.substitute(jsondict)]
+    jsondict.update(flatten_jsondict("mark", mark.to_jsondict(path)))
+
+    template = j2env.get_template('mark.html')
+    result = template.render(**jsondict)
+    return [result.encode('utf-8')]
 
 def one_mark_html(start_response, ctx, stamp0, stamp1):
     mark = ctx.base.lookup(stamp0, stamp1)
@@ -390,7 +401,7 @@ def login_post(start_response, ctx):
     if pwstr != ctx.user['pass']:
         start_response("403 Not Permitted",
                       [('Content-type', 'text/plain; charset=utf-8')])
-        template = j2env.get_template('simple_output')
+        template = j2env.get_template('simple.txt')
         result = template.render(output="403 Not Permitted: Bad Password\r\n")
         return [result.encode('utf-8')]
 
@@ -647,6 +658,20 @@ template_html_header = Template("""
 <body>
 """)
 
+template_header = \
+"""
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+</head>
+<style type="text/css">
+  body {
+    background-color: white;
+  }
+</style>
+<body>
+"""
+
 # The &href should be escaped (although Firefox eats it fine)
 template_html_controls = Template(
 """
@@ -682,12 +707,46 @@ template_html_body_top = Template("""
 </tr></table>
 """)
 
+template_body_top = \
+"""
+<table width="100%" style="background: #ebf7eb"
+ border=0 cellpadding=1 cellspacing=0>
+<tr valign="top">
+    <td align="left">
+        <h2 style="margin-bottom:0"> {{ _main_path }} </h2>
+    </td>
+    <td align="right">
+        {% if flogin %}
+          [<a href="{{ href_new }}">new</a>]
+          [<a href="javascript:
+ var F=document;
+ ref = '';
+ ref += '{{ hrefa_new }}';
+ ref += '?title=' + F.title;
+ ref += '&href=' + location.href;
+ F.location = ref" title="Drag This To Toolbar">bm</a>]
+          [<a href="{{ href_export }}">e</a>]
+        {% else %}
+          [<a href="{{ href_login }}">login</a>]
+        {% endif %}
+        [<b><a href="{{ href_tags }}">tags</a></b>]
+    </td>
+</tr></table>
+"""
+
 # XXX The price of no-#if is &laquo; and &raquo; hardwired in dict. Parameter?
 template_html_body_bottom = Template("""
 <hr />
 [$_page_prev][$_page_this][$_page_next]<br />
 </body></html>
 """)
+
+template_body_bottom = \
+"""
+<hr />
+[{{ _page_prev }}][{{ _page_this }}][{{ _page_next }}]<br />
+</body></html>
+"""
 
 template_html_tag = Template(
 '      <a href="${tag.href_tag}">${tag.name_tag}</a>\r\n'
@@ -713,21 +772,24 @@ template_html_page = Template(
     TemplateElemLoop('mark','marks',template_html_pagemark),
     template_html_body_bottom)
 
-template_html_mark = Template(
-    template_html_header,
-    template_html_body_top,
+template_mark = \
 """
-    <p>${mark.date}<br />
-          <a href="${mark.href_mark_url}">${mark.title}</a> <br />
-""",
-          TemplateElemCond('mark.note', '      ${mark.note}<br />\r\n', None),
-          TemplateElemLoop('tag','mark.tags',template_html_tag),
-"""
+    {% include 'header.html' %}
+    {% include 'body_top.html' %}
+    <p>{{ mark__date }}<br />
+       <a href="{{ mark__href_mark_url }}">{{ mark__title }}</a> <br />
+       {% if mark__note %}
+         {{ mark__note }}<br />
+       {% endif %}
+       {% for tag in mark__tags %}
+         <a href="{{ tag.href_tag }}">{{ tag.name_tag }}</a>
+       {% endfor %}
     </p>
-""",
-    TemplateElemCond('flogin',
-        '    <p>[<a href="$href_edit">edit</a>]</p>\r\n', None),
-    template_html_body_bottom)
+    {% if flogin %}
+        <p>[<a href="{{ href_edit }}">edit</a>]</p>
+    {% endif %}
+    {% include 'body_bottom.html' %}
+"""
 
 template_html_tags = Template(
     template_html_header,
@@ -830,5 +892,9 @@ template_html_editform = Template(
 template_simple_output = """{{ output }}"""
 
 templates = {
-    'simple_output': template_simple_output
+    'body_bottom.html': template_body_bottom,
+    'body_top.html': template_body_top,
+    'header.html': template_header,
+    'mark.html': template_mark,
+    'simple.txt': template_simple_output
 }
