@@ -11,17 +11,21 @@ import six
 
 class FakeMark(object):
 
-    def __init__(self, stamp0):
+    def __init__(self, stamp0, ourtag):
         self._stamp0 = stamp0
+        self._ourtag = ourtag
 
     def key(self):
         return (self._stamp0, 0)
+
+    def tag(self):
+        return self._ourtag
 
     def get_editpath(self, path):
         return '%s/edit?mark=0.0' % (path,)
 
     def to_jsondict(self, path):
-        tag1 = 'test_tag'
+        tag1 = self._ourtag or "test_tag"
 
         tags = [
             {"href_tag": '%s/%s/' % (path, slasti.escapeURLComponent(tag1)),
@@ -48,15 +52,23 @@ class FakeMark(object):
 
 class FakeBase(object):
 
-    def __init__(self, time0=None):
+    def __init__(self, time0=None, tag=None):
         self._time0 = time0
+        self._tag = tag or "test"
 
     def lookup(self, timeint, fix):
         if fix != 0:
             return None
         if timeint != self._time0:
             return None
-        return FakeMark(timeint)
+        return FakeMark(timeint, None)
+
+    def taglookup(self, tag, timeint, fix):
+        if fix != 0:
+            return None
+        if tag != self._tag:
+            return None
+        return FakeMark(timeint, tag)
 
 
 class TestUnit(unittest.TestCase):
@@ -366,7 +378,7 @@ class TestUnit(unittest.TestCase):
         soup = bs4.BeautifulSoup(body, "lxml")
 
         # The body of the mark is just a naked list of <a> tags in a single
-        # bulk <p>. So, all the can do is test if expected <a> are present.
+        # bulk <p>. So, all we can do is test if expected <a> are present.
         a_result = dict((a['href'], a.string) for a in soup.select('a'))
 
         a_pattern = {
@@ -375,6 +387,59 @@ class TestUnit(unittest.TestCase):
             '/testuser/test_tag/': 'test_tag',
             '/testuser/mark.%d.00' % stamp0: u'\u2606'}
 
+        for k in a_pattern:
+            self.assertIn(k, a_result)
+            self.assertEqual(a_result[k], a_pattern[k])
+
+    def test_get_page(self):
+
+        # Our test page contains only one mark, this.
+        stamp0 = 1524461179
+
+        # user_password = "PassWord"
+        user_entry = {
+            "name": "testuser",
+            "type": "fs", "root": "/missing",
+            "salt": "abcdef",
+            "pass": "8bb4b4f91dcfafbfea438ae0132bbd20" }
+
+        base = FakeBase(time0=stamp0)
+
+        status_ = [None]
+        headers_ = [None]
+
+        def fake_start_response(status, headers):
+            status_[0] = status
+            headers_[0] = headers
+
+        ctx = slasti.Context(
+            "", user_entry, base,
+            'GET', 'http', "localhost:8080",
+            u"/testuser/mark.%d.00" % (stamp0,),
+            None, None, None)
+        result_ = slasti.main.page_mark_html(
+            fake_start_response, ctx, stamp0, 0)
+
+        self.assertTrue(status_[0].startswith("200 "))
+        for chunk in result_:
+            self.assertTrue(isinstance(chunk, six.binary_type))
+        body = b''.join(result_)
+        soup = bs4.BeautifulSoup(body, "lxml")
+
+        p_mark = None
+        t_pattern = time.strftime("%Y-%m-%d", time.gmtime(stamp0))
+        for p in soup.select('p'):
+            t = p.get_text()
+            if t and t.startswith(t_pattern):
+                p_mark = p
+        self.assertIsNotNone(p_mark)
+
+        # We only look at <a> inside the <p> for our mark. This test flags
+        # both missing and extra <a> per the mark listed.
+        a_result = dict((a['href'], a.string) for a in p_mark.select('a'))
+        a_pattern = {
+            '/testuser/test_tag/': 'test_tag',
+            '/testuser/mark.%d.00' % stamp0: u'\u2606'}
         for k in a_pattern:
             self.assertIn(k, a_result)
             self.assertEqual(a_result[k], a_pattern[k])
