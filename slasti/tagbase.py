@@ -236,7 +236,7 @@ class TagMark:
         return (self.stamp0, self.stamp1)
 
     def tag(self):
-        return self.ourtag;
+        return self.ourtag
 
     def xml(self):
         datestr = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(self.stamp0))
