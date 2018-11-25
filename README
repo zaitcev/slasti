@@ -4,14 +4,12 @@ Unfortunately, Oishii was taken, so Slasti it is.
 TODO:
  - 2015 - bug - Preload hangs the whole server often
  - add Kris' nonce
- - port to Jinja2 templates
  - redo filesystem-based tagbase format with an index, /tags take too long
  - search, aggregate in tags page - for tablets with poor ^F
  - invoke del2sla from an upload form
    - what if pre-existing marks exist? how to merge?
  - dedup URLs (show found ones at the time of entry)
  - localizations
- - make .substitute to return a list-of-strings; million useless .join now
  - configurable templates loaded from text files
  - how about a templatized root (not user's root, the root root in slasti.wsgi)
    - add version to it, extract from where? only in README at present
@@ -22,8 +20,6 @@ Content Security Policy: The page's settings blocked the loading of a resource a
  - report basic performance data (in-page or out-of-band, either works)
  - "Edit" buttons in page listsings, it's an extra step to edit currently
  - rate-limit logins
- - look into 3rd party login with Mozilla (what's its name? Persona?)
-   - they already cancelled that lol - search for a better provider
  - obey hosts.deny and make sure that denyhosts parses the logs
 
 fixup TODO for templates:
