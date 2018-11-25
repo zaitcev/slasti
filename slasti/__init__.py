@@ -119,6 +119,8 @@ class Context:
         self.cookies = coos
         # flogin: Login flag, to be derived from self.user and self.cookies.
         self.flogin = 0
+        # j2env: the jinja2.Environment
+        self.j2env = None
 
         self._query_args = None
         self._pinput_args = None

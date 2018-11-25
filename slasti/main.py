@@ -20,7 +20,6 @@ from six.moves.urllib.parse import quote, urlsplit
 from slasti import AppError, App400Error, AppLoginError, App404Error
 from slasti import AppGetError, AppGetPostError
 import slasti
-from .template import Template, TemplateElemLoop, TemplateElemCond
 
 PAGESZ = 25
 
@@ -75,8 +74,6 @@ def findmark(mark_str):
     return (stamp0, stamp1)
 
 def page_any_html(start_response, ctx, mark_top):
-    j2env = Environment(loader=DictLoader(templates))
-
     userpath = ctx.prefix+'/'+ctx.user['name']
 
     jsondict = ctx.create_jsondict()
@@ -109,7 +106,7 @@ def page_any_html(start_response, ctx, mark_top):
             })
 
     start_response("200 OK", [('Content-type', 'text/html; charset=utf-8')])
-    template = j2env.get_template('page.html')
+    template = ctx.j2env.get_template('page.html')
     result = template.render(**jsondict)
     return [result.encode('utf-8')]
 
@@ -132,7 +129,6 @@ def page_tag_html(start_response, ctx, tag, stamp0, stamp1):
     return page_any_html(start_response, ctx, mark)
 
 def page_empty_html(start_response, ctx):
-    j2env = Environment(loader=DictLoader(templates))
     username = ctx.user['name']
     userpath = ctx.prefix+'/'+username
 
@@ -140,7 +136,7 @@ def page_empty_html(start_response, ctx):
     jsondict['_main_path'] += ' / [-]'
 
     start_response("200 OK", [('Content-type', 'text/html; charset=utf-8')])
-    template = j2env.get_template('empty.html')
+    template = ctx.j2env.get_template('empty.html')
     result = template.render(**jsondict)
     return [result.encode('utf-8')]
 
@@ -152,7 +148,9 @@ def delete_post(start_response, ctx):
 
     start_response("200 OK", [('Content-type', 'text/html; charset=utf-8')])
     jsondict = ctx.create_jsondict()
-    return [template_html_delete.substitute(jsondict)]
+    template = ctx.j2env.get_template('delete.html')
+    result = template.render(**jsondict)
+    return [result.encode('utf-8')]
 
 def fetch_parse(chunk):
     # BeautifulSoup prints a warning about "using the best available HTML
@@ -233,8 +231,6 @@ def mark_post(start_response, ctx, mark):
     return mark_get(start_response, ctx, mark, stamp0)
 
 def mark_get(start_response, ctx, mark, stamp0):
-    j2env = Environment(loader=DictLoader(templates))
-
     path = ctx.prefix+'/'+ctx.user['name']
 
     jsondict = ctx.create_jsondict()
@@ -247,7 +243,7 @@ def mark_get(start_response, ctx, mark, stamp0):
     jsondict.update({"mark": mark.to_jsondict(path)})
 
     start_response("200 OK", [('Content-type', 'text/html; charset=utf-8')])
-    template = j2env.get_template('mark.html')
+    template = ctx.j2env.get_template('mark.html')
     result = template.render(**jsondict)
     return [result.encode('utf-8')]
 
@@ -345,7 +341,9 @@ def full_tag_html(start_response, ctx):
              "name_tag": ref,
              "num_tagged": tag.num(),
             })
-    return [template_html_tags.substitute(jsondict)]
+    template = ctx.j2env.get_template('tags.html')
+    result = template.render(**jsondict)
+    return [result.encode('utf-8')]
 
 def login_form(start_response, ctx):
     username = ctx.user['name']
@@ -359,15 +357,11 @@ def login_form(start_response, ctx):
             "action_login": "%s/login" % userpath,
             "savedref": savedref,
             }
-    return [template_html_login.substitute(jsondict)]
+    template = ctx.j2env.get_template('login.html')
+    result = template.render(**jsondict)
+    return [result.encode('utf-8')]
 
 def login_post(start_response, ctx):
-    # XXX Setting an Environment should be done somewhere global, right?
-    # XXX also add this:
-    # autoescape=select_autoescape(['html', 'xml'])
-    j2env = Environment(
-        loader=DictLoader(templates))
-
     username = ctx.user['name']
     userpath = ctx.prefix+'/'+username
 
@@ -400,7 +394,7 @@ def login_post(start_response, ctx):
     if pwstr != ctx.user['pass']:
         start_response("403 Not Permitted",
                       [('Content-type', 'text/plain; charset=utf-8')])
-        template = j2env.get_template('simple.txt')
+        template = ctx.j2env.get_template('simple.txt')
         result = template.render(output="403 Not Permitted: Bad Password\r\n")
         return [result.encode('utf-8')]
 
@@ -421,7 +415,9 @@ def login_post(start_response, ctx):
     start_response("303 See Other", response_headers)
 
     jsondict = { "href_redir": redihref }
-    return [template_html_redirect.substitute(jsondict)]
+    template = ctx.j2env.get_template('redirect.html')
+    result = template.render(**jsondict)
+    return [result.encode('utf-8')]
 
 def login(start_response, ctx):
     if ctx.method == 'GET':
@@ -474,11 +470,14 @@ def new_form(start_response, ctx):
             "href_fetch": userpath + '/fetchtitle',
             "mark": None,
             "action_edit": userpath + '/edit',
-            "val_title": title,
-            "val_href": href,
+            "val_title": title or "",
+            "val_href": href or "",
         })
+
     start_response("200 OK", [('Content-type', 'text/html; charset=utf-8')])
-    return [template_html_editform.substitute(jsondict)]
+    template = ctx.j2env.get_template('editform.html')
+    result = template.render(**jsondict)
+    return [result.encode('utf-8')]
 
 def edit_form(start_response, ctx):
     userpath = ctx.prefix + '/' + ctx.user['name']
@@ -505,7 +504,9 @@ def edit_form(start_response, ctx):
         })
 
     start_response("200 OK", [('Content-type', 'text/html; charset=utf-8')])
-    return [template_html_editform.substitute(jsondict)]
+    template = ctx.j2env.get_template('editform.html')
+    result = template.render(**jsondict)
+    return [result.encode('utf-8')]
 
 # The name edit_post() is a bit misleading, because POST to /edit is used
 # to create new marks, not to edit existing ones (see mark_post() for that).
@@ -529,7 +530,9 @@ def edit_post(start_response, ctx):
     start_response("303 See Other", response_headers)
 
     jsondict = { "href_redir": redihref }
-    return [template_html_redirect.substitute(jsondict)]
+    template = ctx.j2env.get_template('redirect.html')
+    result = template.render(**jsondict)
+    return [result.encode('utf-8')]
 
 def new(start_response, ctx):
     if ctx.method == 'GET':
@@ -563,7 +566,9 @@ def redirect_to_login(start_response, ctx):
     start_response("303 See Other", response_headers)
 
     jsondict = { "href_redir": login_loc }
-    return [template_html_redirect.substitute(jsondict)]
+    template = ctx.j2env.get_template('redirect.html')
+    result = template.render(**jsondict)
+    return [result.encode('utf-8')]
 
 #
 # Request paths:
@@ -583,6 +588,9 @@ def redirect_to_login(start_response, ctx):
 #
 def app(start_response, ctx):
     ctx.flogin = login_verify(ctx)
+    # XXX also add this:
+    # autoescape=select_autoescape(['html', 'xml'])
+    ctx.j2env = Environment(loader=DictLoader(templates))
 
     if ctx.path == "login":
         return login(start_response, ctx)
@@ -644,19 +652,6 @@ def app(start_response, ctx):
             return page_mark_html(start_response, ctx, stamp0, stamp1)
         raise App404Error("Not found: "+ctx.path)
 
-template_html_header = Template("""
-<html>
-<head>
-    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-</head>
-<style type="text/css">
-  body {
-    background-color: white;
-  }
-</style>
-<body>
-""")
-
 template_header = \
 """
 <html>
@@ -671,40 +666,7 @@ template_header = \
 <body>
 """
 
-# The &href should be escaped (although Firefox eats it fine)
-template_html_controls = Template(
-"""
-        [<a href="$href_new">new</a>]
-        [<a href="javascript:
- var F=document;
- ref = '';
- ref += '$hrefa_new';
- ref += '?title=' + F.title;
- ref += '&href=' + location.href;
- F.location = ref" title="Drag This To Toolbar">bm</a>]
-        [<a href="$href_export">e</a>]
-""")
-
-template_html_body_top = Template("""
-<table width="100%" style="background: #ebf7eb"
- border=0 cellpadding=1 cellspacing=0>
-<tr valign="top">
-    <td align="left">
-        <h2 style="margin-bottom:0"> $_main_path </h2>
-    </td>
-    <td align="right">
-""",
-    TemplateElemCond('flogin',
-        template_html_controls,
-"""
-        [<a href="$href_login">login</a>]
-"""
-    ),
-"""
-        [<b><a href="$href_tags">tags</a></b>]
-    </td>
-</tr></table>
-""")
+# The &href should be escaped in inline script (although Firefox eats it fine)
 
 template_body_top = \
 """
@@ -786,112 +748,110 @@ template_mark = \
     {% include 'body_bottom.html' %}
 """
 
-template_html_tags = Template(
-    template_html_header,
-    template_html_body_top,
+template_tags = \
 """
+{% include 'header.html' %}
+{% include 'body_top.html' %}
 <p>
-""",
-    TemplateElemLoop('tag','tags',
-        '  <a href="${tag.href_tag}">${tag.name_tag}</a>'+
-        ' ${tag.num_tagged}<br />\r\n'),
-"""
+    {% for tag in tags %}
+       <a href="{{ tag.href_tag }}">{{ tag.name_tag }}</a>
+         {{ tag.num_tagged }}<br />
+    {% endfor %}
 </p>
 <hr />
 </body></html>
-""")
-
-template_html_delete = Template(
-    template_html_header,
-    template_html_body_top,
 """
+
+template_delete = \
+"""
+{% include 'header.html' %}
+{% include 'body_top.html' %}
     <p>Deleted.</p>
-    </body></html>
-""")
-
-template_html_login = Template(
-    template_html_header,
+</body></html>
 """
-    <form action="$action_login" method="POST">
-      $username:
+
+template_login = \
+"""
+{% include 'header.html' %}
+    <form action="{{ action_login }}" method="POST">
+      {{ username }}:
       <input name=password type=password size=32 maxlength=32 />
       <input name=OK type=submit value="Enter" />
-""",
-    TemplateElemCond('savedref',
-      '    <input name=savedref type=hidden value="$savedref" />', None),
-"""
+      {% if savedref %}
+          <input name=savedref type=hidden value="{{ savedref }}" />
+      {% endif %}
     </form>
-    </body>
-    </html>
-""")
-
-template_html_redirect = Template(
-    template_html_header,
+</body>
+</html>
 """
-    <p><a href="$href_redir">See Other</a></p>
-    </body></html>
-""")
 
-template_html_editform = Template(
-    template_html_header,
-    template_html_body_top,
-    """
-    <script src="$href_editjs"></script>
-    <form action="$action_edit" method="POST" name="editform">
+template_redirect = \
+"""
+    {% include 'header.html' %}
+    <p><a href="{{ href_redir }}">See Other</a></p>
+    </body></html>
+"""
+
+template_editform = \
+"""
+{% include 'header.html' %}
+{% include 'body_top.html' %}
+    <script src="{{ href_editjs }}"></script>
+    <form action="{{ action_edit }}" method="POST" name="editform">
      <table>
      <tr>
       <td>Title
       <td>
-        <input name="title" type="text" size=80 maxlength=1023 id="$id_title"
-               value="${val_title:-}" />
-""",
-        TemplateElemCond('mark', None,
-"""
-        <input name="preload" value="Preload" type="button" id="$id_button"
-         onclick="preload_title('$href_fetch', '$id_title', '$id_button');" />
-"""
-        ),
-"""
+        <input name="title" type="text" size=80 maxlength=1023
+               id="{{ id_title }}" value="{{ val_title }}" />
+        {% if mark is none %}
+          <input name="preload" value="Preload" type="button"
+                 id="{{ id_button }}"
+                 onclick="preload_title(
+                     '{{href_fetch}}','{{id_title}}','{{id_button}}');" />
+        {% endif %}
      </tr><tr>
       <td>URL
       <td><input name="href" type="text" size=95 maxlength=1023
-           value="${val_href:-}"/>
+                 value="{{ val_href }}" />
      </tr><tr>
       <td>tags
       <td><input name="tags" type="text" size=95 maxlength=1023
-           value="${val_tags:-}"/>
+                 value="{{ val_tags }}" />
      </tr><tr>
       <td>Extra
       <td><input name="extra" type="text" size=95 maxlength=1023
-           value="${val_note:-}"/>
+                 value="{{ val_note }}" />
      </tr><tr>
       <td colspan=2><input name=action type=submit value="Save" />
      </tr></table>
     </form>
 
-""",
-    TemplateElemCond('action_delete',
-    """
+    {% if action_delete %}
     <p>or</p>
-    <form action="$action_delete" method="POST">
-      <input name=mark type=hidden value="${mark.key}" />
+    <form action="{{ action_delete }}" method="POST">
+      <input name=mark type=hidden value="{{ mark.key }}" />
       <input name=action type=submit value="Delete" />
       (There is no undo.)
     </form>
-    """, None),
-"""
+    {% endif %}
     <hr />
     </body></html>
-""")
+"""
 
 template_simple_output = """{{ output }}"""
 
 templates = {
     'body_bottom.html': template_body_bottom,
     'body_top.html': template_body_top,
+    'delete.html': template_delete,
+    'editform.html': template_editform,
     'empty.html': template_empty,
     'header.html': template_header,
+    'login.html': template_login,
     'mark.html': template_mark,
     'page.html': template_page,
-    'simple.txt': template_simple_output
+    'redirect.html': template_redirect,
+    'simple.txt': template_simple_output,
+    'tags.html': template_tags
 }

@@ -4,9 +4,11 @@ import tempfile
 import time
 import unittest
 
-import slasti
+from jinja2 import Environment, DictLoader
 
 import six
+
+import slasti
 
 
 class FakeMark(object):
@@ -104,6 +106,7 @@ class TestUnit(unittest.TestCase):
         base = slasti.tagbase.TagBase(base_dir)
         ctx = slasti.Context("", user, base, 'GET', 'http', 'localhost',
                              'export.xml', None, None, c)
+        ctx.j2env = Environment(loader=DictLoader(slasti.main.templates))
 
         # Ordering is by the timestamp, newest first, not list order.
         # '\xd0\xbf\xd1\x80\xd0\xbe\xd0\xb2\xd0\xb5\xd1\x80\xd0\xba\xd0\xb0'
@@ -207,6 +210,7 @@ class TestUnit(unittest.TestCase):
             'GET', 'http', "localhost:8080", u"/testuser/login",
             b"savedref=\xe6\x97\xa5\xe6\x9c\xac\xe8\xaa\x9e",
             None, None)
+        ctx.j2env = Environment(loader=DictLoader(slasti.main.templates))
         result_ = slasti.main.login_form(fake_start_response, ctx)
 
         self.assertTrue(status_[0].startswith("200 "))
@@ -233,6 +237,7 @@ class TestUnit(unittest.TestCase):
             'GET', 'http', "localhost:8080", u"/testuser/login",
             u"savedref=\u65e5\u672c\u8a9e",
             None, None)
+        ctx.j2env = Environment(loader=DictLoader(slasti.main.templates))
         result_ = slasti.main.login_form(fake_start_response, ctx)
 
         self.assertTrue(status_[0].startswith("200 "))
@@ -271,6 +276,7 @@ class TestUnit(unittest.TestCase):
             "", user_entry, None,
             'POST', 'http', "localhost:8080", u"/testuser/login", "",
             u'password=X&OK=Enter&savedref=test', None)
+        ctx.j2env = Environment(loader=DictLoader(slasti.main.templates))
         result_ = slasti.main.login_post(fake_start_response, ctx)
 
         self.assertTrue(status_[0].startswith("403 "))
@@ -298,6 +304,7 @@ class TestUnit(unittest.TestCase):
             "", user_entry, None,
             'POST', 'http', "localhost:8080", u"/testuser/login", "",
             u'password=PassWord&OK=Enter&savedref=\u30c6\u30b9\u30c8', None)
+        ctx.j2env = Environment(loader=DictLoader(slasti.main.templates))
         result_ = slasti.main.login_post(fake_start_response, ctx)
 
         self.assertTrue(status_[0].startswith("303 "))
@@ -325,6 +332,7 @@ class TestUnit(unittest.TestCase):
             u"", user_entry, None,
             'POST', 'http', "localhost:8080", u"/testuser/login", "",
             u'password=PassWord&OK=Enter&savedref=\u30c6\u30b9\u30c8', None)
+        ctx.j2env = Environment(loader=DictLoader(slasti.main.templates))
         result_ = slasti.main.login_post(fake_start_response, ctx)
 
         self.assertTrue(status_[0].startswith("303 "))
@@ -368,6 +376,7 @@ class TestUnit(unittest.TestCase):
             'GET', 'http', "localhost:8080",
             u"/testuser/mark.%d.00" % (stamp0,),
             None, None, None)
+        ctx.j2env = Environment(loader=DictLoader(slasti.main.templates))
         result_ = slasti.main.one_mark_html(
             fake_start_response, ctx, stamp0, 0)
 
@@ -417,6 +426,7 @@ class TestUnit(unittest.TestCase):
             'GET', 'http', "localhost:8080",
             u"/testuser/mark.%d.00" % (stamp0,),
             None, None, None)
+        ctx.j2env = Environment(loader=DictLoader(slasti.main.templates))
         result_ = slasti.main.page_mark_html(
             fake_start_response, ctx, stamp0, 0)
 
