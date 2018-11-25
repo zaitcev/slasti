@@ -41,12 +41,6 @@ def page_back(mark):
         n += 1
     return mark
 
-# This is supposed to be a workaround while we're transitioning to Jinja2,
-# and have to maintain the jsondict API. What the old templates referred
-# as mark.foo, the new Jinja2 templates refer as mark__foo.
-def flatten_jsondict(prefix, jsondict):
-    return {'%s__%s' % (prefix, k): v for (k, v) in jsondict.items()}
-
 def page_anchor_html(mark, path, text):
     if mark == None:
         return '-'
@@ -81,6 +75,8 @@ def findmark(mark_str):
     return (stamp0, stamp1)
 
 def page_any_html(start_response, ctx, mark_top):
+    j2env = Environment(loader=DictLoader(templates))
+
     userpath = ctx.prefix+'/'+ctx.user['name']
 
     jsondict = ctx.create_jsondict()
@@ -113,7 +109,9 @@ def page_any_html(start_response, ctx, mark_top):
             })
 
     start_response("200 OK", [('Content-type', 'text/html; charset=utf-8')])
-    return [template_html_page.substitute(jsondict)]
+    template = j2env.get_template('page.html')
+    result = template.render(**jsondict)
+    return [result.encode('utf-8')]
 
 def page_mark_html(start_response, ctx, stamp0, stamp1):
     mark = ctx.base.lookup(stamp0, stamp1)
@@ -134,16 +132,17 @@ def page_tag_html(start_response, ctx, tag, stamp0, stamp1):
     return page_any_html(start_response, ctx, mark)
 
 def page_empty_html(start_response, ctx):
+    j2env = Environment(loader=DictLoader(templates))
     username = ctx.user['name']
     userpath = ctx.prefix+'/'+username
 
-    start_response("200 OK", [('Content-type', 'text/html; charset=utf-8')])
     jsondict = ctx.create_jsondict()
     jsondict['_main_path'] += ' / [-]'
-    jsondict.update({
-                "marks": [],
-               })
-    return [template_html_page.substitute(jsondict)]
+
+    start_response("200 OK", [('Content-type', 'text/html; charset=utf-8')])
+    template = j2env.get_template('empty.html')
+    result = template.render(**jsondict)
+    return [result.encode('utf-8')]
 
 def delete_post(start_response, ctx):
     path = ctx.prefix+'/'+ctx.user['name']
@@ -238,7 +237,6 @@ def mark_get(start_response, ctx, mark, stamp0):
 
     path = ctx.prefix+'/'+ctx.user['name']
 
-    start_response("200 OK", [('Content-type', 'text/html; charset=utf-8')])
     jsondict = ctx.create_jsondict()
     jsondict.update({
                 "href_edit": mark.get_editpath(path),
@@ -246,8 +244,9 @@ def mark_get(start_response, ctx, mark, stamp0):
                 "_page_this": mark_anchor_html(mark,        path, WHITESTAR),
                 "_page_next": mark_anchor_html(mark.succ(), path, "&raquo;")
                })
-    jsondict.update(flatten_jsondict("mark", mark.to_jsondict(path)))
+    jsondict.update({"mark": mark.to_jsondict(path)})
 
+    start_response("200 OK", [('Content-type', 'text/html; charset=utf-8')])
     template = j2env.get_template('mark.html')
     result = template.render(**jsondict)
     return [result.encode('utf-8')]
@@ -735,12 +734,6 @@ template_body_top = \
 """
 
 # XXX The price of no-#if is &laquo; and &raquo; hardwired in dict. Parameter?
-template_html_body_bottom = Template("""
-<hr />
-[$_page_prev][$_page_this][$_page_next]<br />
-</body></html>
-""")
-
 template_body_bottom = \
 """
 <hr />
@@ -748,40 +741,42 @@ template_body_bottom = \
 </body></html>
 """
 
-template_html_tag = Template(
-'      <a href="${tag.href_tag}">${tag.name_tag}</a>\r\n'
-)
+template_page = \
+"""
+    {% include 'header.html' %}
+    {% include 'body_top.html' %}
+    {% for mark in marks %}
+      <p>{{ mark.date }} [<a href="{{ mark.href_mark }}">&#9734;</a>]
+       <a href="{{ mark.href_mark_url }}">{{ mark.title }}</a>
+       {% if mark.note %}
+         <br />{{ mark.note }}
+       {% endif %}
+       <br />
+       {% for tag in mark.tags %}
+         <a href="{{ tag.href_tag }}">{{ tag.name_tag }}</a>
+       {% endfor %}
+      </p>
+    {% endfor %}
+    {% include 'body_bottom.html' %}
+"""
 
-template_html_pagemark = Template("""
-<p>${mark.date} [<a href="${mark.href_mark}">&#9734;</a>]
-   <a href="${mark.href_mark_url}">${mark.title}</a>
-""",
-    TemplateElemCond('mark.note', '<br />${mark.note}', None),
+template_empty = \
 """
-   <br />
-""",
-    TemplateElemLoop('tag','mark.tags',template_html_tag),
+    {% include 'header.html' %}
+    {% include 'body_top.html' %}
+    {% include 'body_bottom.html' %}
 """
-</p>
-"""
-)
-
-template_html_page = Template(
-    template_html_header,
-    template_html_body_top,
-    TemplateElemLoop('mark','marks',template_html_pagemark),
-    template_html_body_bottom)
 
 template_mark = \
 """
     {% include 'header.html' %}
     {% include 'body_top.html' %}
-    <p>{{ mark__date }}<br />
-       <a href="{{ mark__href_mark_url }}">{{ mark__title }}</a> <br />
-       {% if mark__note %}
-         {{ mark__note }}<br />
+    <p>{{ mark.date }}<br />
+       <a href="{{ mark.href_mark_url }}">{{ mark.title }}</a> <br />
+       {% if mark.note %}
+         {{ mark.note }}<br />
        {% endif %}
-       {% for tag in mark__tags %}
+       {% for tag in mark.tags %}
          <a href="{{ tag.href_tag }}">{{ tag.name_tag }}</a>
        {% endfor %}
     </p>
@@ -894,7 +889,9 @@ template_simple_output = """{{ output }}"""
 templates = {
     'body_bottom.html': template_body_bottom,
     'body_top.html': template_body_top,
+    'empty.html': template_empty,
     'header.html': template_header,
     'mark.html': template_mark,
+    'page.html': template_page,
     'simple.txt': template_simple_output
 }
