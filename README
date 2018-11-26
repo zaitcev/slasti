@@ -21,6 +21,7 @@ Content Security Policy: The page's settings blocked the loading of a resource a
  - "Edit" buttons in page listsings, it's an extra step to edit currently
  - rate-limit logins
  - obey hosts.deny and make sure that denyhosts parses the logs
+ - preserve the tag list of the just-deleted mark and display in "Deleted"
 
 fixup TODO for templates:
  - rename "jsondict" into something sensible
