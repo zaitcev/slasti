@@ -259,21 +259,21 @@ class TagMark:
               ' extended="%s" />\n'
         return fmt % (url, title, tagstr, datestr, note)
 
-    def get_editpath(self, path_prefix):
-        return '%s/edit?mark=%d.%02d' % (path_prefix, self.stamp0, self.stamp1)
-
+    # We return mark's jsondict here, not a full-page jsondict, of course.
     def to_jsondict(self, path_prefix):
         title = self.title
         if not title:
             title = self.url
 
         mark_url = '%s/mark.%d.%02d' % (path_prefix, self.stamp0, self.stamp1)
+        edit_url = '%s/edit?mark=%d.%02d' % (
+                                        path_prefix, self.stamp0, self.stamp1)
         ts = time.gmtime(self.stamp0)
-        # XXX common constructor with create_jsondict, please
         jsondict = {
             "date": time.strftime("%Y-%m-%d", ts),
             "href_mark": mark_url,
             "href_mark_url": slasti.escapeURL(self.url),
+            "href_edit": edit_url,
             "title": title,
             "note": self.note,
             "tags": [],

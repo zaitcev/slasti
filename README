@@ -18,7 +18,6 @@ TODO:
 Content Security Policy: The page's settings blocked the loading of a resource at self ("script-src https://assets-cdn.github.com https://collector-cdn.github.com").
  - Implement HEAD, make sure returns no body on error
  - report basic performance data (in-page or out-of-band, either works)
- - "Edit" buttons in page listsings, it's an extra step to edit currently
  - rate-limit logins
  - obey hosts.deny and make sure that denyhosts parses the logs
  - preserve the tag list of the just-deleted mark and display in "Deleted"

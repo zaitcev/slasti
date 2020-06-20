@@ -23,9 +23,6 @@ class FakeMark(object):
     def tag(self):
         return self._ourtag
 
-    def get_editpath(self, path):
-        return '%s/edit?mark=0.0' % (path,)
-
     def to_jsondict(self, path):
         tag1 = self._ourtag or "test_tag"
 
@@ -38,6 +35,7 @@ class FakeMark(object):
             "date": time.strftime("%Y-%m-%d", time.gmtime(self._stamp0)),
             "href_mark": '%s/mark.%d.%02d' % (path, self._stamp0, 0),
             "href_mark_url": slasti.escapeURL("http://www.ibm.com/"),
+            "href_edit": '%s/edit?mark=0.0' % (path,),
             "title": "Test_title",
             "note": "",
             "tags": tags,
@@ -390,6 +388,7 @@ class TestUnit(unittest.TestCase):
         # bulk <p>. So, all we can do is test if expected <a> are present.
         a_result = dict((a['href'], a.string) for a in soup.select('a'))
 
+        # {'/testuser/edit?mark=%d.00': u'\u1F589'} -- only when logged in
         a_pattern = {
             '/testuser/login?savedref=/testuser/mark.%d.00' % stamp0: 'login',
             '/testuser/tags': 'tags',

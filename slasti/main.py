@@ -235,7 +235,6 @@ def mark_get(start_response, ctx, mark, stamp0):
 
     jsondict = ctx.create_jsondict()
     jsondict.update({
-                "href_edit": mark.get_editpath(path),
                 "_page_prev": mark_anchor_html(mark.pred(), path, "&laquo;"),
                 "_page_this": mark_anchor_html(mark,        path, WHITESTAR),
                 "_page_next": mark_anchor_html(mark.succ(), path, "&raquo;")
@@ -709,6 +708,9 @@ template_page = \
     {% include 'body_top.html' %}
     {% for mark in marks %}
       <p>{{ mark.date }} [<a href="{{ mark.href_mark }}">&#9734;</a>]
+       {% if flogin %}
+         [<a href="{{ mark.href_edit }}">&#128393;</a>]
+       {% endif %}
        <a href="{{ mark.href_mark_url }}">{{ mark.title }}</a>
        {% if mark.note %}
          <br />{{ mark.note }}
@@ -734,6 +736,9 @@ template_mark = \
     {% include 'header.html' %}
     {% include 'body_top.html' %}
     <p>{{ mark.date }}<br />
+       {% if flogin %}
+         [<a href="{{ mark.href_edit }}">&#128393;</a>]<br />
+       {% endif %}
        <a href="{{ mark.href_mark_url }}">{{ mark.title }}</a> <br />
        {% if mark.note %}
          {{ mark.note }}<br />
@@ -742,9 +747,6 @@ template_mark = \
          <a href="{{ tag.href_tag }}">{{ tag.name_tag }}</a>
        {% endfor %}
     </p>
-    {% if flogin %}
-        <p>[<a href="{{ href_edit }}">edit</a>]</p>
-    {% endif %}
     {% include 'body_bottom.html' %}
 """
 
