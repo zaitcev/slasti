@@ -331,22 +331,17 @@ class TagMarkCursor:
     # py3
     __next__ = next
 
-    # def __del__(self):
-    #     ......
-
 class TagTag:
-    def __init__(self, base, taglist, tagindex):
-        self.base = base
-        self.ourlist = taglist
-        self.ourindex = tagindex
+    def __init__(self, base, tagname):
+        self.ourname = tagname
 
-        self.nmark = len(split_marks(load_tag(base.tagdir, taglist[tagindex])))
+        self.nmark = len(split_marks(load_tag(base.tagdir, tagname)))
 
     def __str__(self):
-        return self.ourlist[self.ourindex]
+        return self.ourname
 
     def key(self):
-        return self.ourlist[self.ourindex]
+        return self.ourname
 
     def num(self):
         return self.nmark
@@ -365,7 +360,7 @@ class TagTagCursor:
     def next(self):
         if self.index >= self.length:
             raise StopIteration
-        tag = TagTag(self.base, self.dlist, self.index)
+        tag = TagTag(self.base, self.dlist[self.index])
         self.index += 1
         return tag
 
@@ -603,3 +598,9 @@ class TagBase:
 
     def tagcurs(self):
         return TagTagCursor(self)
+
+    def keylookup(self, tagname):
+        tag = TagTag(self, tagname)
+        if tag.nmark == 0:
+            return None
+        return tag

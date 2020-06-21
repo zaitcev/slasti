@@ -141,13 +141,31 @@ def page_empty_html(start_response, ctx):
     return [result.encode('utf-8')]
 
 def delete_post(start_response, ctx):
-    path = ctx.prefix+'/'+ctx.user['name']
+    userpath = ctx.prefix+'/'+ctx.user['name']
 
     (stamp0, stamp1) = findmark(ctx.get_pinput_arg("mark"))
+
+    mark = ctx.base.lookup(stamp0, stamp1)
+    if not mark:
+        raise App400Error("not found: "+str(stamp0)+"."+str(stamp1))
+    tags = mark.tags
+
     ctx.base.delete(stamp0, stamp1);
 
-    start_response("200 OK", [('Content-type', 'text/html; charset=utf-8')])
     jsondict = ctx.create_jsondict()
+
+    jsondict["tags"] = []
+    for ref in tags:
+        tag = ctx.base.keylookup(ref)
+        if tag is None:
+            continue
+        jsondict["tags"].append(
+            {"href_tag": '%s/%s/' % (userpath, slasti.escapeURLComponent(ref)),
+             "name_tag": ref,
+             "num_tagged": tag.num(),
+            })
+
+    start_response("200 OK", [('Content-type', 'text/html; charset=utf-8')])
     template = ctx.j2env.get_template('delete.html')
     result = template.render(**jsondict)
     return [result.encode('utf-8')]
@@ -265,28 +283,6 @@ def root_mark_html(start_response, ctx):
     if mark == None:
         return page_empty_html(start_response, ctx)
     return page_any_html(start_response, ctx, mark)
-    ## The non-paginated version
-    #
-    # response_headers = [('Content-type', 'text/html')]
-    # start_response("200 OK", response_headers)
-    # output = ["<html><body>\n"]
-    #
-    # left_lead = '  <h2 style="margin-bottom:0">'+\
-    #             '<a href="%s/">%s</a></h2>\n' % \
-    #             (ctx.path, ctx.user['name']))
-    # spit_lead(output, ctx, left_lead)
-    #
-    # for mark in base:
-    #     (stamp0, stamp1) = mark.key()
-    #     datestr = time.strftime("%Y-%m-%d", time.gmtime(stamp0))
-    #
-    #     output.append("<p>%s %s " % \
-    #                   (datestr, mark_anchor_html(mark, ctx.path, WHITESTAR)))
-    #     output.append(mark.html())
-    #     output.append("</p>\n")
-    #
-    # output.append("</body></html>\n")
-    # return output
 
 def root_tag_html(start_response, ctx, tag):
     mark = ctx.base.tagfirst(tag)
@@ -350,12 +346,12 @@ def login_form(start_response, ctx):
     savedref = ctx.get_query_arg("savedref")
 
     start_response("200 OK", [('Content-type', 'text/html; charset=utf-8')])
-    # XXX Common constructor with create_jsondict?
-    jsondict = {
+    jsondict = ctx.create_jsondict()
+    jsondict.update({
             "username": username,
             "action_login": "%s/login" % userpath,
             "savedref": savedref,
-            }
+            })
     template = ctx.j2env.get_template('login.html')
     result = template.render(**jsondict)
     return [result.encode('utf-8')]
@@ -694,7 +690,6 @@ template_body_top = \
 </tr></table>
 """
 
-# XXX The price of no-#if is &laquo; and &raquo; hardwired in dict. Parameter?
 template_body_bottom = \
 """
 <hr />
@@ -768,21 +763,30 @@ template_delete = \
 """
 {% include 'header.html' %}
 {% include 'body_top.html' %}
-    <p>Deleted.</p>
+  <p>Deleted.</p>
+  <p>
+    {% for tag in tags %}
+       <a href="{{ tag.href_tag }}">{{ tag.name_tag }}</a>
+         {{ tag.num_tagged }}<br />
+    {% endfor %}
+  </p>
 </body></html>
 """
 
 template_login = \
 """
 {% include 'header.html' %}
+{% include 'body_top.html' %}
+  <div align="center">
     <form action="{{ action_login }}" method="POST">
-      {{ username }}:
+      Password:
       <input name=password type=password size=32 maxlength=32 />
       <input name=OK type=submit value="Enter" />
       {% if savedref %}
           <input name=savedref type=hidden value="{{ savedref }}" />
       {% endif %}
     </form>
+  </div>
 </body>
 </html>
 """
