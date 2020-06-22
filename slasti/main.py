@@ -17,8 +17,9 @@ from jinja2 import Environment, DictLoader
 from six.moves import http_client
 from six.moves.urllib.parse import quote, urlsplit
 
-from slasti import AppError, App400Error, AppLoginError, App404Error
-from slasti import AppGetError, AppGetPostError
+from slasti import (
+   AppError, App400Error, AppLoginError, App404Error, AppGetError,
+   AppGetHeadError, AppGetHeadPostError, AppGetPostError)
 import slasti
 
 PAGESZ = 25
@@ -73,7 +74,7 @@ def findmark(mark_str):
         raise App400Error("bad mark format")
     return (stamp0, stamp1)
 
-def page_any_html(start_response, ctx, mark_top):
+def page_any_html(start_response, ctx, mark_top, headonly=False):
     userpath = ctx.prefix+'/'+ctx.user['name']
 
     jsondict = ctx.create_jsondict()
@@ -106,6 +107,8 @@ def page_any_html(start_response, ctx, mark_top):
             })
 
     start_response("200 OK", [('Content-type', 'text/html; charset=utf-8')])
+    if headonly:
+        return [b'']
     template = ctx.j2env.get_template('page.html')
     result = template.render(**jsondict)
     return [result.encode('utf-8')]
@@ -115,20 +118,24 @@ def page_mark_html(start_response, ctx, stamp0, stamp1):
     if mark == None:
         # We have to have at least one mark to display a page
         raise App404Error("Page not found: "+str(stamp0)+"."+str(stamp1))
-    if ctx.method != 'GET':
-        raise AppGetError(ctx.method)
-    return page_any_html(start_response, ctx, mark)
+    if ctx.method == 'GET':
+        return page_any_html(start_response, ctx, mark)
+    if ctx.method == 'HEAD':
+        return page_any_html(start_response, ctx, mark, headonly=True)
+    raise AppGetHeadError(ctx.method)
 
 def page_tag_html(start_response, ctx, tag, stamp0, stamp1):
     mark = ctx.base.taglookup(tag, stamp0, stamp1)
     if mark == None:
         raise App404Error("Tag page not found: "+tag+" / "+
                            str(stamp0)+"."+str(stamp1))
-    if ctx.method != 'GET':
-        raise AppGetError(ctx.method)
-    return page_any_html(start_response, ctx, mark)
+    if ctx.method == 'GET':
+        return page_any_html(start_response, ctx, mark)
+    if ctx.method == 'HEAD':
+        return page_any_html(start_response, ctx, mark, headonly=True)
+    raise AppGetHeadError(ctx.method)
 
-def page_empty_html(start_response, ctx):
+def page_empty_html(start_response, ctx, headonly=False):
     username = ctx.user['name']
     userpath = ctx.prefix+'/'+username
 
@@ -136,6 +143,8 @@ def page_empty_html(start_response, ctx):
     jsondict['_main_path'] += ' / [-]'
 
     start_response("200 OK", [('Content-type', 'text/html; charset=utf-8')])
+    if headonly:
+        return [b'']
     template = ctx.j2env.get_template('empty.html')
     result = template.render(**jsondict)
     return [result.encode('utf-8')]
@@ -248,7 +257,7 @@ def mark_post(start_response, ctx, mark):
         raise App404Error("Mark not found: "+str(stamp0)+"."+str(stamp1))
     return mark_get(start_response, ctx, mark, stamp0)
 
-def mark_get(start_response, ctx, mark, stamp0):
+def mark_get(start_response, ctx, mark, stamp0, headonly=False):
     path = ctx.prefix+'/'+ctx.user['name']
 
     jsondict = ctx.create_jsondict()
@@ -260,6 +269,8 @@ def mark_get(start_response, ctx, mark, stamp0):
     jsondict.update({"mark": mark.to_jsondict(path)})
 
     start_response("200 OK", [('Content-type', 'text/html; charset=utf-8')])
+    if headonly:
+        return [b'']
     template = ctx.j2env.get_template('mark.html')
     result = template.render(**jsondict)
     return [result.encode('utf-8')]
@@ -270,28 +281,37 @@ def one_mark_html(start_response, ctx, stamp0, stamp1):
         raise App404Error("Mark not found: "+str(stamp0)+"."+str(stamp1))
     if ctx.method == 'GET':
         return mark_get(start_response, ctx, mark, stamp0)
+    if ctx.method == 'HEAD':
+        return mark_get(start_response, ctx, mark, stamp0, headonly=True)
     if ctx.method == 'POST':
         if ctx.flogin == 0:
             raise AppLoginError()
         return mark_post(start_response, ctx, mark)
-    raise AppGetPostError(ctx.method)
+    raise AppGetHeadPostError(ctx.method)
 
 def root_mark_html(start_response, ctx):
-    if ctx.method != 'GET':
-        raise AppGetError(ctx.method)
-    mark = ctx.base.first()
-    if mark == None:
-        return page_empty_html(start_response, ctx)
-    return page_any_html(start_response, ctx, mark)
+    if ctx.method == 'GET':
+        mark = ctx.base.first()
+        if mark == None:
+            return page_empty_html(start_response, ctx)
+        return page_any_html(start_response, ctx, mark)
+    if ctx.method == 'HEAD':
+        mark = ctx.base.first()
+        if mark == None:
+            return page_empty_html(start_response, ctx, headonly=True)
+        return page_any_html(start_response, ctx, mark, headonly=True)
+    raise AppGetHeadError(ctx.method)
 
 def root_tag_html(start_response, ctx, tag):
     mark = ctx.base.tagfirst(tag)
     if mark == None:
         # Not sure if this may happen legitimately, so 404 for now.
         raise App404Error("Tag page not found: "+tag)
-    if ctx.method != 'GET':
-        raise AppGetError(ctx.method)
-    return page_any_html(start_response, ctx, mark)
+    if ctx.method == 'GET':
+        return page_any_html(start_response, ctx, mark)
+    if ctx.method == 'HEAD':
+        return page_any_html(start_response, ctx, mark, headonly=True)
+    raise AppGetHeadError(ctx.method)
 
 class MarkDumper(object):
     def __init__(self, base, user):
@@ -321,8 +341,13 @@ def full_mark_xml(start_response, ctx):
     return MarkDumper(ctx.base, ctx.user)
 
 def full_tag_html(start_response, ctx):
+    if ctx.method == 'HEAD':
+        start_response("200 OK",
+                       [('Content-type', 'text/html; charset=utf-8')])
+        return [b'']
+
     if ctx.method != 'GET':
-        raise AppGetError(ctx.method)
+        raise AppGetHeadError(ctx.method)
 
     userpath = ctx.prefix + '/' + ctx.user['name']
     start_response("200 OK", [('Content-type', 'text/html; charset=utf-8')])

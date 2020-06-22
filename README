@@ -6,6 +6,7 @@ TODO:
  - add Kris' nonce
  - redo filesystem-based tagbase format with an index, /tags take too long
  - search, aggregate in tags page - for tablets with poor ^F
+   - Paginated tags list and a search input box for use with tablets
  - invoke del2sla from an upload form
    - what if pre-existing marks exist? how to merge?
  - dedup URLs (show found ones at the time of entry)
@@ -16,11 +17,11 @@ TODO:
  - 2.0.1 bookmarklet cannot be used unless already logged in, needs a retry.
  - bookmarklet cannot pre-load a Github page, fails with:
 Content Security Policy: The page's settings blocked the loading of a resource at self ("script-src https://assets-cdn.github.com https://collector-cdn.github.com").
- - Implement HEAD, make sure returns no body on error
+ = Implement HEAD, make sure returns no body on error
+   - will save any badwidth only if If-Modified-Since is implemented also
  - report basic performance data (in-page or out-of-band, either works)
  - rate-limit logins
  - obey hosts.deny and make sure that denyhosts parses the logs
- - Paginated tags list and a search input box for use with tablets
  - annotations for tags
  - If you hit "new" while in a tag, pre-fill the tag
 

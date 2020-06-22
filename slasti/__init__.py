@@ -19,9 +19,13 @@ class App404Error(Exception):
     pass
 class AppGetError(Exception):
     pass
+class AppGetHeadError(Exception):
+    pass
 class AppPostError(Exception):
     pass
 class AppGetPostError(Exception):
+    pass
+class AppGetHeadPostError(Exception):
     pass
 
 

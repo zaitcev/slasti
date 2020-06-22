@@ -17,7 +17,7 @@ from six.moves import http_cookies
 # sys.path = sys.path + [ '/usr/lib/slasti-mod' ]
 
 import slasti
-from slasti import AppError, App404Error, AppGetError
+from slasti import AppError
 
 # The idea here is the same as with the file-backed tags database:
 # something simple to implement but with an API that presumes a higher
@@ -75,12 +75,14 @@ class UserBase:
 
 def do_root(environ, start_response):
     method = environ['REQUEST_METHOD']
-    if method != 'GET':
-        raise AppGetError(method)
-
-    start_response("200 OK", [('Content-type', 'text/plain')])
-    return [b"Slasti: The Anti-Social Bookmarking\r\n",
-            b"(https://github.com/zaitcev/slasti)\r\n"]
+    if method == 'GET':
+        start_response("200 OK", [('Content-type', 'text/plain')])
+        return [b"Slasti: The Anti-Social Bookmarking\r\n",
+                b"(https://github.com/zaitcev/slasti)\r\n"]
+    if method == 'HEAD':
+        start_response("200 OK", [('Content-type', 'text/plain')])
+        return [b'']
+    raise slasti.AppGetHeadError(method)
 
 def do_user(environ, start_response, path):
     # We will stop reloading UserBase on every call once we figure out how.
@@ -127,7 +129,7 @@ def do_user(environ, start_response, path):
 
     user = users.lookup(parsed[1])
     if user == None:
-        raise App404Error("No such user: "+parsed[1])
+        raise slasti.App404Error("No such user: "+parsed[1])
     if user['type'] != 'fs':
         raise AppError("Unknown type of user: "+parsed[1])
 
@@ -161,6 +163,17 @@ def do_user(environ, start_response, path):
     base.close()
     return output
 
+def error_return(environ, return_iter):
+    return [b''] if environ['REQUEST_METHOD'] == 'HEAD' else return_iter
+
+def error_bad_method(environ, start_response, e, ok_methods):
+    start_response("405 Method Not Allowed",
+                   [('Content-type', 'text/plain'), ('Allow', ok_methods)])
+    return error_return(
+        environ,
+        [b"405 Method %s not allowed\r\n" %
+         slasti.safestr(six.text_type(e))])
+
 def application(environ, start_response):
 
     # import os, pwd
@@ -174,7 +187,9 @@ def application(environ, start_response):
             except UnicodeDecodeError:
                 start_response("400 Bad Request",
                                [('Content-type', 'text/plain')])
-                return ["400 Unable to decode UTF-8 in path\r\n"]
+                return error_return(
+                    environ,
+                    ["400 Unable to decode UTF-8 in path\r\n"])
     else:
         # Graham Dumpleton talks about wsgi.path_info and wsgi.uri_encoding,
         # but none of them actually exist: it's identity encoding for the URL
@@ -185,7 +200,8 @@ def application(environ, start_response):
         except UnicodeDecodeError:
             start_response("400 Bad Request",
                            [('Content-type', 'text/plain')])
-            return [b"400 Unable to decode UTF-8 in path\r\n"]
+            return error_return(
+                environ, [b"400 Unable to decode UTF-8 in path\r\n"])
 
     try:
         if path == None or path == "" or path == "/":
@@ -196,32 +212,30 @@ def application(environ, start_response):
 
     except AppError as e:
         start_response("500 Internal Error", [('Content-type', 'text/plain')])
-        return [slasti.safestr(six.text_type(e)), b"\r\n"]
+        return error_return(
+            environ, [slasti.safestr(six.text_type(e)), b"\r\n"])
     except slasti.App400Error as e:
         start_response("400 Bad Request", [('Content-type', 'text/plain')])
-        return [b"400 Bad Request: %s\r\n" % slasti.safestr(six.text_type(e))]
+        return error_return(
+            environ,
+            [b"400 Bad Request: %s\r\n" % slasti.safestr(six.text_type(e))])
     except slasti.AppLoginError as e:
         start_response("403 Not Permitted", [('Content-type', 'text/plain')])
-        return [b"403 Not Logged In\r\n"]
-    except App404Error as e:
+        return error_return(environ, [b"403 Not Logged In\r\n"])
+    except slasti.App404Error as e:
         start_response("404 Not Found", [('Content-type', 'text/plain')])
-        return [slasti.safestr(six.text_type(e))+b"\r\n"]
-    except AppGetError as e:
-        start_response("405 Method Not Allowed",
-                       [('Content-type', 'text/plain'), ('Allow', 'GET')])
-        return [b"405 Method %s not allowed\r\n" %
-                slasti.safestr(six.text_type(e))]
+        return error_return(
+            environ, [slasti.safestr(six.text_type(e))+b"\r\n"])
+    except slasti.AppGetError as e:
+        return error_bad_method(environ, start_response, e, 'GET')
+    except slasti.AppGetHeadError as e:
+        return error_bad_method(environ, start_response, e, 'GET, HEAD')
     except slasti.AppPostError as e:
-        start_response("405 Method Not Allowed",
-                       [('Content-type', 'text/plain'), ('Allow', 'POST')])
-        return [b"405 Method %s not allowed\r\n" %
-                slasti.safestr(six.text_type(e))]
+        return error_bad_method(environ, start_response, e, 'POST')
     except slasti.AppGetPostError as e:
-        start_response("405 Method Not Allowed",
-                       [('Content-type', 'text/plain'),
-                        ('Allow', 'GET, POST')])
-        return [b"405 Method %s not allowed\r\n" %
-                slasti.safestr(six.text_type(e))]
+        return error_bad_method(environ, start_response, e, 'GET, POST')
+    except slasti.AppGetHeadPostError as e:
+        return error_bad_method(environ, start_response, e, 'GET, POST, HEAD')
 
 # We do not have __main__ in WSGI.
 # if __name__.startswith('_mod_wsgi_'):
