@@ -13,9 +13,10 @@ utf8_writer = codecs.getwriter("utf-8")
 import os
 import errno
 import time
-import cgi
 import base64
 import six
+
+from xml.sax.saxutils import quoteattr
 
 from slasti import AppError
 import slasti
@@ -240,23 +241,16 @@ class TagMark:
 
     def xml(self):
         datestr = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(self.stamp0))
+        datestr = '"%s"' % datestr
 
-        title = self.title
-        title = cgi.escape(title, 1)
-
-        url = self.url;
-        url = cgi.escape(url, 1)
-
-        tagstr = " ".join(self.tags)
-        tagstr = cgi.escape(tagstr, 1)
-
-        note = self.note
-        note = cgi.escape(note, 1)
+        title = quoteattr(self.title)
+        url = quoteattr(self.url);
+        tagstr = quoteattr(" ".join(self.tags))
+        note = quoteattr(self.note)
 
         # Del.icio.us also export hash="" (MD5 of URL in href) and meta=""
         # (MD5 of unknown content). We don't know if this is needed for anyone.
-        fmt = '  <post href="%s" description="%s" tag="%s" time="%s"'+\
-              ' extended="%s" />\n'
+        fmt = '  <post href=%s description=%s tag=%s time=%s extended=%s />\n'
         return fmt % (url, title, tagstr, datestr, note)
 
     # We return mark's jsondict here, not a full-page jsondict, of course.
