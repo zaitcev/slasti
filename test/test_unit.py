@@ -18,6 +18,9 @@ class FakeMark(object):
         self._stamp0 = stamp0
         self._ourtag = ourtag
 
+        # Setting the modification time to be the same as creation time.
+        self.mtime = float(stamp0)
+
     def key(self):
         return (self._stamp0, 0)
 
@@ -439,7 +442,7 @@ class TestUnit(unittest.TestCase):
             "salt": "abcdef",
             "pass": "8bb4b4f91dcfafbfea438ae0132bbd20" }
 
-        base = FakeBase(time0=stamp0)
+        base = FakeBase(time0=stamp0, tag="python4")
 
         status_ = [None]
         headers_ = [None]
@@ -451,7 +454,7 @@ class TestUnit(unittest.TestCase):
         ctx = slasti.Context(
             "", user_entry, base,
             'GET', 'http', "localhost:8080",
-            u"/testuser/mark.%d.00" % (stamp0,),
+            u"/testuser/python4/",
             None, None, None, None)
         ctx.j2env = Environment(loader=DictLoader(slasti.main.templates))
         result_ = slasti.main.page_mark_html(
@@ -517,11 +520,6 @@ class TestUnit(unittest.TestCase):
         for chunk in result_:
             self.assertEqual(chunk, b'')
 
-        headers = dict()
-        for t in headers_[0]:
-            headers[t[0]] = t[1]
-        # self.assertTrue(isinstance(headers['Set-Cookie'], str))
-
         #
         # Test 1: Do the conditional HEAD with a time in the past.
         #
@@ -541,11 +539,28 @@ class TestUnit(unittest.TestCase):
         for chunk in result_:
             self.assertEqual(chunk, b'')
 
+        #
+        # Test 2: Do the conditional HEAD with a time in the future.
+        #
+
+        ims_ts = float(stamp0) + 1.0
+
+        ctx = slasti.Context(
+            "", user_entry, base,
+            'HEAD', 'http', "localhost:8080",
+            u"/testuser/mark.%d.00" % (stamp0,),
+            None, None, None, ims_ts)
+        ctx.j2env = Environment(loader=DictLoader(slasti.main.templates))
+        result_ = slasti.main.one_mark_html(
+            fake_start_response, ctx, stamp0, 0)
+
+        self.assertTrue(status_[0].startswith("304 "))
+        for chunk in result_:
+            self.assertEqual(chunk, b'')
+
         headers = dict()
         for t in headers_[0]:
             headers[t[0]] = t[1]
-        # self.assertTrue(isinstance(headers['Set-Cookie'], str))
-
-        # XXX and now
-
-        ims_ts = float(stamp0) + 1.0
+        self.assertEqual(
+            headers['Content-Location'],
+            "/testuser/mark.%d.00" % (stamp0,))

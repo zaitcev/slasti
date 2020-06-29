@@ -12,6 +12,7 @@ import codecs
 utf8_writer = codecs.getwriter("utf-8")
 import os
 import errno
+import math
 import time
 import base64
 import six
@@ -163,6 +164,7 @@ class TagMark:
 
         self.stamp0 = 0
         self.stamp1 = 0
+        self.mtime = 0.0
         self.title = "-"
         self.url = "-"
         self.note = ""
@@ -181,9 +183,27 @@ class TagMark:
             self.stamp1 = 2
             f.close()
             return
+
+        s_words = s.split()
+
+        mtime = None
+        if len(s_words) > 1:
+            # The tag was written by mtime-aware code
+            try:
+                mtime = float(s_words[1])
+            except ValueError:
+                pass
+        if mtime is None:
+            # Old-style mark or whatever
+            try:
+                mtime = math.floor(float(os.fstat(f.fileno()).st_mtime))
+            except (OSError, ValueError, OverflowError):
+                mtime = 0.0
+            self.mtime = mtime
+
         # Format is defined as two integers over a dot, which unfortunately
         # looks like a decimal fraction. Should've used a space. Oh well.
-        slist = s.rstrip("\r\n").split(".")
+        slist = s_words[0].rstrip("\r\n").split(".")
         if len(slist) != 2:
             self.stamp1 = 3
             f.close()

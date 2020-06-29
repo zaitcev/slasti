@@ -255,10 +255,18 @@ def mark_post(start_response, ctx, mark):
     mark = ctx.base.lookup(stamp0, stamp1)
     if mark == None:
         raise App404Error("Mark not found: "+str(stamp0)+"."+str(stamp1))
-    return mark_get(start_response, ctx, mark, stamp0)
+    return mark_get(start_response, ctx, mark)
 
-def mark_get(start_response, ctx, mark, stamp0, headonly=False):
+def mark_get(start_response, ctx, mark, headonly=False):
     path = ctx.prefix+'/'+ctx.user['name']
+
+    if ctx.ims_ts and mark.mtime and mark.mtime <= ctx.ims_ts:
+        (stamp0, stamp1) = mark.key()
+        redihref = slasti.to_str('%s/mark.%d.%02d' % (path, stamp0, stamp1))
+        response_headers = [('Content-type', 'text/html; charset=utf-8')]
+        response_headers.append(('Content-Location', redihref))
+        start_response("304 Not Modified", response_headers)
+        return [b'']
 
     jsondict = ctx.create_jsondict()
     jsondict.update({
@@ -280,9 +288,9 @@ def one_mark_html(start_response, ctx, stamp0, stamp1):
     if mark == None:
         raise App404Error("Mark not found: "+str(stamp0)+"."+str(stamp1))
     if ctx.method == 'GET':
-        return mark_get(start_response, ctx, mark, stamp0)
+        return mark_get(start_response, ctx, mark)
     if ctx.method == 'HEAD':
-        return mark_get(start_response, ctx, mark, stamp0, headonly=True)
+        return mark_get(start_response, ctx, mark, headonly=True)
     if ctx.method == 'POST':
         if ctx.flogin == 0:
             raise AppLoginError()
@@ -428,7 +436,7 @@ def login_post(start_response, ctx):
     # We use hex instead of base64 because it's easy to test in shell.
     mdstr = coohash.hexdigest()
 
-    response_headers = [('Content-type', 'text/html; charset=utf-8')]
+    response_headers = [('Content-type', 'text/plain')]
     # Set an RFC 2901 cookie (not RFC 2965).
     response_headers.append(('Set-Cookie', "login=%s:%s" % (opdata, mdstr)))
     response_headers.append(('Location', redihref))
