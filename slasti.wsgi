@@ -152,12 +152,14 @@ def do_user(environ, start_response, path):
     except KeyError:
         c = None
 
+    ims_ts = slasti.ims_make_ts(environ.get('HTTP_IF_MODIFIED_SINCE'))
+
     base = slasti.tagbase.TagBase(user['root'])
     base.open()
 
     ctx = slasti.Context(pfx, user, base,
                          method, scheme, netloc, path,
-                         q, pinput, c)
+                         q, pinput, c, ims_ts)
     output = slasti.main.app(start_response, ctx)
 
     base.close()

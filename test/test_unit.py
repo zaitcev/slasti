@@ -1,4 +1,5 @@
 import bs4
+import math
 import shutil
 import tempfile
 import time
@@ -86,6 +87,30 @@ class TestUnit(unittest.TestCase):
         self.assertEqual(res[0], ["tmp"])
         self.assertEqual(res[1], [])
 
+    def test_ims(self):
+
+        # We could easily use a constant timestamp, or several of them.
+        # But this is simpler.
+        vary_ts = math.floor(time.time())
+
+        vary_time = time.gmtime(vary_ts)
+
+        # We override locales (so this test runs in Japan), and therefore
+        # we cannot use the convenient time.strftime().
+        wday = (
+            'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun')[vary_time.tm_wday]
+        month = (
+            'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+            'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec')[vary_time.tm_mon - 1]
+        # ims_sample = time.strftime("%a, %02d %m %Y %H:%M:%S GMT", vary_time)
+        ims_sample = "%s, %02d %s %d %02d:%02d:%02d GMT" % (
+            wday, vary_time.tm_mday, month, vary_time.tm_year,
+            vary_time.tm_hour, vary_time.tm_min, vary_time.tm_sec)
+
+        test_ts = slasti.ims_make_ts(ims_sample)
+
+        self.assertEqual(test_ts, vary_ts)
+
     def test_export(self):
 
         capt_status = None
@@ -103,7 +128,7 @@ class TestUnit(unittest.TestCase):
         user = { 'name':"auser", 'type':"fs", 'root': base_dir }
         base = slasti.tagbase.TagBase(base_dir)
         ctx = slasti.Context("", user, base, 'GET', 'http', 'localhost',
-                             'export.xml', None, None, c)
+                             'export.xml', None, None, c, None)
         ctx.j2env = Environment(loader=DictLoader(slasti.main.templates))
 
         # Ordering is by the timestamp, newest first, not list order.
@@ -173,7 +198,8 @@ class TestUnit(unittest.TestCase):
     def test_ctx_parse_args(self):
 
         ctx = slasti.Context(
-            None, None, None, 'GET', 'http', None, None, None, None, None)
+            None, None, None, 'GET', 'http', None,
+            None, None, None, None, None)
 
         qd = ctx._parse_args(b"savedref=\xe6\x97\xa5\xe6\x9c\xac\xe8\xaa\x9e*")
         self.assertEqual(qd['savedref'], u'\u65e5\u672c\u8a9e*')
@@ -207,7 +233,7 @@ class TestUnit(unittest.TestCase):
             "", user_entry, None,
             'GET', 'http', "localhost:8080", u"/testuser/login",
             b"savedref=\xe6\x97\xa5\xe6\x9c\xac\xe8\xaa\x9e",
-            None, None)
+            None, None, None)
         ctx.j2env = Environment(loader=DictLoader(slasti.main.templates))
         result_ = slasti.main.login_form(fake_start_response, ctx)
 
@@ -234,7 +260,7 @@ class TestUnit(unittest.TestCase):
             "", user_entry, None,
             'GET', 'http', "localhost:8080", u"/testuser/login",
             u"savedref=\u65e5\u672c\u8a9e",
-            None, None)
+            None, None, None)
         ctx.j2env = Environment(loader=DictLoader(slasti.main.templates))
         result_ = slasti.main.login_form(fake_start_response, ctx)
 
@@ -273,7 +299,7 @@ class TestUnit(unittest.TestCase):
         ctx = slasti.Context(
             "", user_entry, None,
             'POST', 'http', "localhost:8080", u"/testuser/login", "",
-            u'password=X&OK=Enter&savedref=test', None)
+            u'password=X&OK=Enter&savedref=test', None, None)
         ctx.j2env = Environment(loader=DictLoader(slasti.main.templates))
         result_ = slasti.main.login_post(fake_start_response, ctx)
 
@@ -301,7 +327,8 @@ class TestUnit(unittest.TestCase):
         ctx = slasti.Context(
             "", user_entry, None,
             'POST', 'http', "localhost:8080", u"/testuser/login", "",
-            u'password=PassWord&OK=Enter&savedref=\u30c6\u30b9\u30c8', None)
+            u'password=PassWord&OK=Enter&savedref=\u30c6\u30b9\u30c8',
+            None, None)
         ctx.j2env = Environment(loader=DictLoader(slasti.main.templates))
         result_ = slasti.main.login_post(fake_start_response, ctx)
 
@@ -329,7 +356,8 @@ class TestUnit(unittest.TestCase):
         ctx = slasti.Context(
             u"", user_entry, None,
             'POST', 'http', "localhost:8080", u"/testuser/login", "",
-            u'password=PassWord&OK=Enter&savedref=\u30c6\u30b9\u30c8', None)
+            u'password=PassWord&OK=Enter&savedref=\u30c6\u30b9\u30c8',
+            None, None)
         ctx.j2env = Environment(loader=DictLoader(slasti.main.templates))
         result_ = slasti.main.login_post(fake_start_response, ctx)
 
@@ -373,7 +401,7 @@ class TestUnit(unittest.TestCase):
             "", user_entry, base,
             'GET', 'http', "localhost:8080",
             u"/testuser/mark.%d.00" % (stamp0,),
-            None, None, None)
+            None, None, None, None)
         ctx.j2env = Environment(loader=DictLoader(slasti.main.templates))
         result_ = slasti.main.one_mark_html(
             fake_start_response, ctx, stamp0, 0)
@@ -424,7 +452,7 @@ class TestUnit(unittest.TestCase):
             "", user_entry, base,
             'GET', 'http', "localhost:8080",
             u"/testuser/mark.%d.00" % (stamp0,),
-            None, None, None)
+            None, None, None, None)
         ctx.j2env = Environment(loader=DictLoader(slasti.main.templates))
         result_ = slasti.main.page_mark_html(
             fake_start_response, ctx, stamp0, 0)
@@ -452,3 +480,72 @@ class TestUnit(unittest.TestCase):
         for k in a_pattern:
             self.assertIn(k, a_result)
             self.assertEqual(a_result[k], a_pattern[k])
+
+    def test_head_conditional(self):
+
+        stamp0 = 1524461179
+
+        # user_password = "PassWord"
+        user_entry = {
+            "name": "testuser",
+            "type": "fs", "root": "/missing",
+            "salt": "abcdef",
+            "pass": "8bb4b4f91dcfafbfea438ae0132bbd20" }
+
+        base = FakeBase(time0=stamp0)
+
+        status_ = [None]
+        headers_ = [None]
+
+        def fake_start_response(status, headers):
+            status_[0] = status
+            headers_[0] = headers
+
+        #
+        # Test Zero: Do the unconditional HEAD
+        #
+        ctx = slasti.Context(
+            "", user_entry, base,
+            'HEAD', 'http', "localhost:8080",
+            u"/testuser/mark.%d.00" % (stamp0,),
+            None, None, None, None)
+        ctx.j2env = Environment(loader=DictLoader(slasti.main.templates))
+        result_ = slasti.main.one_mark_html(
+            fake_start_response, ctx, stamp0, 0)
+
+        self.assertTrue(status_[0].startswith("200 "))
+        for chunk in result_:
+            self.assertEqual(chunk, b'')
+
+        headers = dict()
+        for t in headers_[0]:
+            headers[t[0]] = t[1]
+        # self.assertTrue(isinstance(headers['Set-Cookie'], str))
+
+        #
+        # Test 1: Do the conditional HEAD with a time in the past.
+        #
+
+        ims_ts = float(stamp0) - 1.0
+
+        ctx = slasti.Context(
+            "", user_entry, base,
+            'HEAD', 'http', "localhost:8080",
+            u"/testuser/mark.%d.00" % (stamp0,),
+            None, None, None, ims_ts)
+        ctx.j2env = Environment(loader=DictLoader(slasti.main.templates))
+        result_ = slasti.main.one_mark_html(
+            fake_start_response, ctx, stamp0, 0)
+
+        self.assertTrue(status_[0].startswith("200 "))
+        for chunk in result_:
+            self.assertEqual(chunk, b'')
+
+        headers = dict()
+        for t in headers_[0]:
+            headers[t[0]] = t[1]
+        # self.assertTrue(isinstance(headers['Set-Cookie'], str))
+
+        # XXX and now
+
+        ims_ts = float(stamp0) + 1.0

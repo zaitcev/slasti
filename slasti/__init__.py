@@ -5,6 +5,10 @@
 # See file COPYING for licensing information (expect GPL 2).
 #
 
+import datetime
+import email.utils
+import time
+
 import six
 from six.moves.urllib.parse import parse_qs, quote, quote_plus
 
@@ -96,9 +100,31 @@ def escapeHTML(text):
     return "".join(html_escape_table.get(c,c) for c in text)
 
 
+def ims_make_ts(ims_hdr):
+    if not ims_hdr:
+        return None
+
+    try:
+        ims = email.utils.parsedate_to_datetime(ims_hdr)
+    except (TypeError, IndexError, OverflowError, ValueError):
+        return None
+
+    if ims.tzinfo is not None:
+        if ims.tzinfo is not datetime.timezone.utc:
+            return None
+        ims = ims.replace(tzinfo=None)
+
+    # Unfortunately, we continue to pretend to support Python 2.
+    # ims_ts = ims.timestamp()
+    ims_ts = \
+       (ims - datetime.datetime(1970, 1, 1)) / datetime.timedelta(seconds=1)
+
+    return ims_ts
+
+
 class Context:
     def __init__(self, pfx, user, base, method, scheme, netloc, path,
-                 query, pinput, coos):
+                 query, pinput, coos, ims_ts):
         # prefix: Path where the application is mounted in WSGI or empty string.
         self.prefix = pfx
         # user: User entry.
@@ -121,6 +147,8 @@ class Context:
         self._pinput = pinput
         # cookies: Cookie class. May be None.
         self.cookies = coos
+        # ims_ts: If-Modified-Since converted to time.time()
+        self.ims_ts = ims_ts
         # flogin: Login flag, to be derived from self.user and self.cookies.
         self.flogin = 0
         # j2env: the jinja2.Environment
