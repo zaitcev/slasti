@@ -187,7 +187,7 @@ class TestUnit(unittest.TestCase):
             </html>
         """
         title1 = slasti.main.fetch_parse(html1)
-        self.assertEquals('Simple Test', title1)
+        self.assertEqual('Simple Test', title1)
 
         html2 = """
             <html>
@@ -196,7 +196,7 @@ class TestUnit(unittest.TestCase):
             </html>
         """
         title2 = slasti.main.fetch_parse(html2)
-        self.assertEquals(u'The Online Comic \xa91999-2010 Greg Dean', title2)
+        self.assertEqual(u'The Online Comic \xa91999-2010 Greg Dean', title2)
 
     def test_ctx_parse_args(self):
 
@@ -312,8 +312,7 @@ class TestUnit(unittest.TestCase):
         for t in headers_[0]:
             headers[t[0]] = t[1]
         self.assertTrue(isinstance(headers['Content-type'], str))
-        self.assertEquals(headers['Content-type'],
-                          'text/plain; charset=utf-8')
+        self.assertEqual(headers['Content-type'], 'text/plain; charset=utf-8')
 
         for chunk in result_:
             self.assertTrue(isinstance(chunk, six.binary_type))
@@ -345,8 +344,8 @@ class TestUnit(unittest.TestCase):
         # Look for "b'str'" in order to catch a stray str(b'str') on py3.
         self.assertNotIn("b'", headers['Set-Cookie'])
         self.assertTrue(isinstance(headers['Location'], str))
-        self.assertEquals(headers['Location'],
-                          '/testuser/%E3%83%86%E3%82%B9%E3%83%88')
+        self.assertEqual(headers['Location'],
+                         '/testuser/%E3%83%86%E3%82%B9%E3%83%88')
 
         for chunk in result_:
             self.assertTrue(isinstance(chunk, six.binary_type))
@@ -374,8 +373,8 @@ class TestUnit(unittest.TestCase):
         # Look for "b'str'" in order to catch a stray str(b'str') on py3.
         self.assertNotIn("b'", headers['Set-Cookie'])
         self.assertTrue(isinstance(headers['Location'], str))
-        self.assertEquals(headers['Location'],
-                          '/testuser/%E3%83%86%E3%82%B9%E3%83%88')
+        self.assertEqual(headers['Location'],
+                         '/testuser/%E3%83%86%E3%82%B9%E3%83%88')
 
         for chunk in result_:
             self.assertTrue(isinstance(chunk, six.binary_type))
