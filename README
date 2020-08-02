@@ -23,6 +23,7 @@ Content Security Policy: The page's settings blocked the loading of a resource a
  - annotations for tags
  - If you hit "new" while in a tag, pre-fill the tag
  - rename "jsondict" into something sensible
+ - If extra text contains "" quotes, the quoted part is gone from edit pre-fill
 
 Tests are intended for any standard harness.
 Just type
