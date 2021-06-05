@@ -178,11 +178,15 @@ class Context:
                 jsondict["href_login"] += '?savedref=%s' % self.path
 
         userstr = '<a href="%s/">%s</a>' % (userpath, self.user['name'])
-        jsondict['_main_path'] = userstr
+        jsondict['main_path'] = userpath
+        jsondict['main_text'] = self.user['name']
+        jsondict['main_path_ext'] = None
+        jsondict['main_text_ext'] = None
 
-        jsondict['_page_prev'] = "-"
-        jsondict['_page_this'] = "-"
-        jsondict['_page_next'] = "-"
+        jsondict['page_prev_href'] = None
+        jsondict['page_this_href'] = None
+        jsondict['page_this_text'] = "-"
+        jsondict['page_next_href'] = None
 
         return jsondict
 

@@ -12,7 +12,7 @@ import hashlib
 import os
 import time
 
-from jinja2 import Environment, DictLoader
+from jinja2 import Environment, DictLoader, select_autoescape
 
 from six.moves import http_client
 from six.moves.urllib.parse import quote, urlsplit
@@ -41,17 +41,17 @@ def page_back(mark):
         n += 1
     return mark
 
-def page_anchor_html(mark, path, text):
+def page_anchor_href(mark, path):
     if mark == None:
-        return '-'
+        return None
     (stamp0, stamp1) = mark.key()
-    return '<a href="%s/page.%d.%02d">%s</a>' % (path, stamp0, stamp1, text)
+    return '%s/page.%d.%02d' % (path, stamp0, stamp1)
 
-def mark_anchor_html(mark, path, text):
+def mark_anchor_href(mark, path):
     if mark == None:
-        return '-'
+        return None
     (stamp0, stamp1) = mark.key()
-    return '<a href="%s/mark.%d.%02d">%s</a>' % (path, stamp0, stamp1, text)
+    return '%s/mark.%d.%02d' % (path, stamp0, stamp1)
 
 def find_post_args(ctx):
     rdic = {}
@@ -82,10 +82,10 @@ def page_any_html(start_response, ctx, mark_top, headonly=False):
     what = mark_top.tag()
     if what:
         path = userpath + '/' + slasti.escapeURL(what)
-        jsondict['_main_path'] += ' / '+slasti.escapeHTML(what)+'/'
+        jsondict['main_text_ext'] = what+'/'
     else:
         path = userpath
-        jsondict['_main_path'] += ' / '+BLACKSTAR
+        jsondict['main_text_ext'] = BLACKSTAR
 
     jsondict["marks"] = []
 
@@ -101,10 +101,11 @@ def page_any_html(start_response, ctx, mark_top, headonly=False):
         mark = mark_next
 
     jsondict.update({
-         "_page_prev": page_anchor_html(page_back(mark_top), path, "&laquo;"),
-         "_page_this": page_anchor_html(mark_top,            path, BLACKSTAR),
-         "_page_next": page_anchor_html(mark_next,           path, "&raquo;")
-            })
+        "page_prev_href": page_anchor_href(page_back(mark_top), path),
+        "page_this_href": page_anchor_href(mark_top,            path),
+        "page_this_text": BLACKSTAR,
+        "page_next_href": page_anchor_href(mark_next,           path)
+    })
 
     start_response("200 OK", [('Content-type', 'text/html; charset=utf-8')])
     if headonly:
@@ -140,7 +141,7 @@ def page_empty_html(start_response, ctx, headonly=False):
     userpath = ctx.prefix+'/'+username
 
     jsondict = ctx.create_jsondict()
-    jsondict['_main_path'] += ' / [-]'
+    jsondict['main_text_ext'] = '[-]'
 
     start_response("200 OK", [('Content-type', 'text/html; charset=utf-8')])
     if headonly:
@@ -270,10 +271,11 @@ def mark_get(start_response, ctx, mark, headonly=False):
 
     jsondict = ctx.create_jsondict()
     jsondict.update({
-                "_page_prev": mark_anchor_html(mark.pred(), path, "&laquo;"),
-                "_page_this": mark_anchor_html(mark,        path, WHITESTAR),
-                "_page_next": mark_anchor_html(mark.succ(), path, "&raquo;")
-               })
+        "page_prev_href": mark_anchor_href(mark.pred(), path),
+        "page_this_href": mark_anchor_href(mark,        path),
+        "page_this_text": WHITESTAR,
+        "page_next_href": mark_anchor_href(mark.succ(), path)
+    })
     jsondict.update({"mark": mark.to_jsondict(path)})
 
     start_response("200 OK", [('Content-type', 'text/html; charset=utf-8')])
@@ -360,7 +362,7 @@ def full_tag_html(start_response, ctx):
     userpath = ctx.prefix + '/' + ctx.user['name']
     start_response("200 OK", [('Content-type', 'text/html; charset=utf-8')])
     jsondict = ctx.create_jsondict()
-    jsondict['_main_path'] += ' / tags'
+    jsondict['main_text_ext'] = 'tags'
     jsondict["tags"] = []
     for tag in ctx.base.tagcurs():
         ref = tag.key()
@@ -490,7 +492,7 @@ def new_form(start_response, ctx):
     href = ctx.get_query_arg('href')
 
     jsondict = ctx.create_jsondict()
-    jsondict['_main_path'] += ' / ['+WHITESTAR+']'
+    jsondict['main_text_ext'] = '['+WHITESTAR+']'
     jsondict.update({
             "id_title": "title1",
             "id_button": "button1",
@@ -516,7 +518,8 @@ def edit_form(start_response, ctx):
         raise App400Error("not found: "+str(stamp0)+"."+str(stamp1))
 
     jsondict = ctx.create_jsondict()
-    jsondict['_main_path'] += ' / '+mark_anchor_html(mark, userpath, WHITESTAR)
+    jsondict['main_path_ext'] = mark_anchor_href(mark, userpath)
+    jsondict['main_text_ext'] = WHITESTAR
     jsondict.update({
         "id_title": "title1",
         "id_button": "button1",
@@ -616,9 +619,8 @@ def redirect_to_login(start_response, ctx):
 #
 def app(start_response, ctx):
     ctx.flogin = login_verify(ctx)
-    # XXX also add this:
-    # autoescape=select_autoescape(['html', 'xml'])
-    ctx.j2env = Environment(loader=DictLoader(templates))
+    ctx.j2env = Environment(loader=DictLoader(templates),
+        autoescape=select_autoescape(['html', 'xml']))
 
     if ctx.path == "login":
         return login(start_response, ctx)
@@ -702,7 +704,18 @@ template_body_top = \
  border=0 cellpadding=1 cellspacing=0>
 <tr valign="top">
     <td align="left">
-        <h2 style="margin-bottom:0"> {{ _main_path }} </h2>
+        <h2 style="margin-bottom:0">
+          <a href="{{ main_path }}/">{{ main_text }}</a>
+          {% if main_text_ext %}
+            /
+            {% if main_path_ext %}
+              <a href="{{ main_path_ext }}">{{ main_text_ext }}</a>
+            {% else %}
+              {{ main_text_ext }}
+            {% endif %}
+          {% endif %}
+        </h2>
+
     </td>
     <td align="right">
         {% if flogin %}
@@ -726,7 +739,21 @@ template_body_top = \
 template_body_bottom = \
 """
 <hr />
-[{{ _page_prev }}][{{ _page_this }}][{{ _page_next }}]<br />
+{% if page_prev_href %}
+    [<a href="{{ page_prev_href }}">&laquo;</a>]
+{% else %}
+    [-]
+{% endif %}
+{% if page_this_href %}
+    [<a href="{{ page_this_href }}">{{ page_this_text }}</a>]
+{% else %}
+    [{{ page_this_text }}]
+{% endif %}
+{% if page_next_href %}
+    [<a href="{{ page_next_href }}">&raquo;</a>]
+{% else %}
+    [-]
+{% endif %}
 </body></html>
 """
 
