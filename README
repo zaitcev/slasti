@@ -2,6 +2,8 @@ Slasti version 2.2-dev
 Unfortunately, Oishii was taken, so Slasti it is.
 
 TODO:
+ - 2024 - add private mode when bookmarks are only visible when logged in
+ - There's corruption at the flagship instance, make a checker tool
  - 2015 - bug - Preload hangs the whole server often
  - add Kris' nonce
  - redo filesystem-based tagbase format with an index, /tags take too long
